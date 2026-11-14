@@ -174,6 +174,9 @@ add_library(common
 
 if(DOLPHIN_SWITCH)
   target_sources(common PRIVATE SwitchSaltyNX.cpp SwitchSaltyNX.h)
+  if(DOLPHIN_SWITCH_DIAGNOSTICS)
+    target_sources(common PRIVATE SwitchDiagnostics.cpp SwitchDiagnostics.h)
+  endif()
   get_target_property(_common_sources common SOURCES)
   list(REMOVE_ITEM _common_sources
     DynamicLibrary.cpp

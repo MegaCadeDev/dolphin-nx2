@@ -2,25 +2,38 @@ if(NOT DOLPHIN_SWITCH OR NOT NINTENDO_SWITCH)
   message(FATAL_ERROR "SwitchDependencies.cmake is only valid with the libnx Switch toolchain")
 endif()
 
-set(DOLPHIN_SWITCH_NVK_OBJECT
-    "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/libvulkan_local.o"
-    CACHE FILEPATH
-    "Localized NVK driver object produced by Tools/Switch/prepare_mesa_sdk.sh")
+if(DOLPHIN_SWITCH2)
+  # Tools/Switch/prepare_ouncevk.sh localized OunceVK at configure time.
+  foreach(_switch_mesa_required_file IN ITEMS
+      "${DOLPHIN_SWITCH_OUNCEVK_ARCHIVE}"
+      "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/include/EGL/egl.h"
+      "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/include/vulkan/vulkan.h")
+    if(NOT EXISTS "${_switch_mesa_required_file}")
+      message(FATAL_ERROR "OunceVK file is missing: ${_switch_mesa_required_file}. "
+        "Install ounce-devkit.")
+    endif()
+  endforeach()
+else()
+  set(DOLPHIN_SWITCH_NVK_OBJECT
+      "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/libvulkan_local.o"
+      CACHE FILEPATH
+      "Localized NVK driver object produced by Tools/Switch/prepare_mesa_sdk.sh")
 
-if(NOT EXISTS "${DOLPHIN_SWITCH_NVK_OBJECT}")
-  message(FATAL_ERROR
-    "The localized NVK driver was not found at ${DOLPHIN_SWITCH_NVK_OBJECT}. "
-    "Run Tools/Switch/prepare_mesa_sdk.sh before configuring Dolphin.")
-endif()
-foreach(_switch_mesa_required_file IN ITEMS
-    "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/lib/libEGL.a"
-    "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/lib/libvulkan.a"
-    "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/include/EGL/egl.h"
-    "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/include/vulkan/vulkan.h")
-  if(NOT EXISTS "${_switch_mesa_required_file}")
-    message(FATAL_ERROR "Unified Mesa SDK file is missing: ${_switch_mesa_required_file}")
+  if(NOT EXISTS "${DOLPHIN_SWITCH_NVK_OBJECT}")
+    message(FATAL_ERROR
+      "The localized NVK driver was not found at ${DOLPHIN_SWITCH_NVK_OBJECT}. "
+      "Run Tools/Switch/prepare_mesa_sdk.sh before configuring Dolphin.")
   endif()
-endforeach()
+  foreach(_switch_mesa_required_file IN ITEMS
+      "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/lib/libEGL.a"
+      "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/lib/libvulkan.a"
+      "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/include/EGL/egl.h"
+      "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/include/vulkan/vulkan.h")
+    if(NOT EXISTS "${_switch_mesa_required_file}")
+      message(FATAL_ERROR "Unified Mesa SDK file is missing: ${_switch_mesa_required_file}")
+    endif()
+  endforeach()
+endif()
 
 set(_switch_portlibs "${DEVKITPRO}/portlibs/switch")
 
@@ -175,17 +188,28 @@ target_include_directories(libusbhsfs PRIVATE
 # Avoid libusbhsfs' get_fattime symbol colliding with Dolphin's FatFs copy.
 target_compile_definitions(libusbhsfs PRIVATE get_fattime=usbhsfs_get_fattime)
 
-add_library(SwitchNVK UNKNOWN IMPORTED GLOBAL)
-set_target_properties(SwitchNVK PROPERTIES
-  IMPORTED_LOCATION "${DOLPHIN_SWITCH_NVK_OBJECT}"
-)
+if(DOLPHIN_SWITCH2)
+  # The localized OunceVK archive behind OpenGL::EGL also holds the Vulkan driver.
+  add_library(SwitchNVK INTERFACE)
+  target_link_libraries(SwitchNVK INTERFACE OpenGL::EGL)
+else()
+  add_library(SwitchNVK UNKNOWN IMPORTED GLOBAL)
+  set_target_properties(SwitchNVK PROPERTIES
+    IMPORTED_LOCATION "${DOLPHIN_SWITCH_NVK_OBJECT}"
+  )
+endif()
 add_library(Switch::NVK ALIAS SwitchNVK)
 
-add_library(SwitchELF STATIC IMPORTED GLOBAL)
-set_target_properties(SwitchELF PROPERTIES
-  IMPORTED_LOCATION "${_switch_portlibs}/lib/libelf.a"
-  INTERFACE_INCLUDE_DIRECTORIES "${_switch_portlibs}/include"
-)
+# Only the Switch 1 Mesa SDK's NVK object needs libelf.
+if(DOLPHIN_SWITCH2)
+  add_library(SwitchELF INTERFACE)
+else()
+  add_library(SwitchELF STATIC IMPORTED GLOBAL)
+  set_target_properties(SwitchELF PROPERTIES
+    IMPORTED_LOCATION "${_switch_portlibs}/lib/libelf.a"
+    INTERFACE_INCLUDE_DIRECTORIES "${_switch_portlibs}/include"
+  )
+endif()
 add_library(Switch::ELF ALIAS SwitchELF)
 
 add_library(SwitchExpat STATIC IMPORTED GLOBAL)

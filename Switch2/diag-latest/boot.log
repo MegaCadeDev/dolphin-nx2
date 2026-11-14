@@ -1,0 +1,65 @@
+
+========== new run ==========
+[  908923 ms] Dolphin diagnostics build started
+[  908925 ms] image base 0x8000000 end 0x12e2f710 (size 0xae2f710)
+[  908927 ms] applet type 0
+[  908928 ms] process memory total 0x23c000000 (9152 MiB)
+[  908929 ms] process memory used 0x23bd38000 (9149 MiB)
+[  908931 ms] core mask 0x3f
+[  908932 ms] alias region size 0x2000000000
+[  908933 ms] heap region size 0x300000000
+[  908935 ms] aslr region size 0x7ff8000000
+[  908936 ms] kaiHEN ldr:ro session: present (0x0)
+[  908938 ms] main: entered (argc 1)
+[  908939 ms] main: argv[0] = sdmc:/switch/dolphin.nro
+[  908941 ms] main: reserving fastmem arena
+[  908942 ms] fastmem: arena window 0x4177800000 (size 0x200000000)
+[  908943 ms] main: fastmem arena reserved
+[  908944 ms] main: starting SaltyNX
+[  908946 ms] main: SaltyNX started
+[  908950 ms] main: romfsInit 0x0
+[  908953 ms] main: applet mode 0
+[  908955 ms] main: UICommon::Init
+[  909064 ms] Dolphin console logging enabled (effective level 4)
+[  909066 ms] main: PopulateBackendInfo (window 0xae28c68)
+[  909068 ms] vulkan: negotiating ICD interface
+[  909069 ms] vulkan: ICD negotiation 0 (version 7)
+[  909070 ms] vulkan: global dispatch GIPA=1 CreateInstance=1 Extensions=1 Layers=0 Version=1
+[  909110 ms] main: PopulateBackendInfo done
+[  909112 ms] main: RunLauncher
+[  915675 ms] main: RunLauncher returned (request 0)
+[  915678 ms] main: returning
+[  915679 ms] exit: overlay_renderer_guard
+[  915681 ms] exit: overlay_renderer_guard done
+[  915682 ms] exit: applet_hook_guard
+[  915683 ms] exit: applet_hook_guard done
+[  915685 ms] exit: achievement_guard
+[  915687 ms] exit: achievement_guard done
+[  915688 ms] exit: ui_common_guard
+[  915690 ms] exit: ui_common_guard done
+[  915691 ms] exit: platform_guard
+[  915692 ms] exit: platform_guard done
+[  915694 ms] exit: audio_guard
+[  915780 ms] exit: audio_guard done
+[  915782 ms] exit: saltynx_guard
+[  915783 ms] exit: saltynx_guard done
+[  915784 ms] exit: exit_lock_guard
+[  915786 ms] memory map (before releasing the exit lock):
+[  915788 ms]   0x0008000000 size 0x001864000 type 0x08 attr 0x0 perm 0x5 ipc 0 dev 0 (image)
+[  915789 ms]   0x0009864000 size 0x000920000 type 0x08 attr 0x0 perm 0x1 ipc 0 dev 0 (image)
+[  915790 ms]   0x000a184000 size 0x000122000 type 0x09 attr 0x10 perm 0x1 ipc 0 dev 0 (image)
+[  915792 ms]   0x000a2a6000 size 0x00001e000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[  915793 ms]   0x000a2c4000 size 0x000b6c000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[  915794 ms]   0x0478ccb000 size 0x000001000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[  915795 ms]   0x23dfe00000 size 0x000014000 type 0x03 attr 0x0 perm 0x5 ipc 0 dev 0
+[  915797 ms]   0x23dfe14000 size 0x000003000 type 0x03 attr 0x0 perm 0x1 ipc 0 dev 0
+[  915798 ms]   0x23dfe17000 size 0x000001000 type 0x04 attr 0x10 perm 0x1 ipc 0 dev 0
+[  915799 ms]   0x23dfe18000 size 0x000110000 type 0x04 attr 0x0 perm 0x3 ipc 0 dev 0
+[  915800 ms]   0x2579600000 size 0x0022c4000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[  915802 ms]   0x257b8c4000 size 0x000b6c000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[  915803 ms]   0x2f475ab000 size 0x000040000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[  915805 ms]   0x3e187c9000 size 0x000001000 type 0x0c attr 0x0 perm 0x3 ipc 0 dev 0
+[  915806 ms]   0x4d13894000 size 0x000010000 type 0x0b attr 0x0 perm 0x3 ipc 0 dev 0
+[  915807 ms]   0x8000000000 size 0xffffff8000000000 type 0x10 attr 0x0 perm 0x0 ipc 0 dev 0
+[  915809 ms] memory map end: 16 regions listed, 0 skipped, plain heap 0x2365d0000, used 0x23bd38000
+[  915810 ms] memory map verdict (before releasing the exit lock): 3 region(s) that can lock memory for the next program

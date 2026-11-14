@@ -45,7 +45,7 @@ add_executable(dolphin-switch
 set_source_files_properties(ExceptionStack.c PROPERTIES COMPILE_OPTIONS "-fno-lto")
 
 target_include_directories(dolphin-switch PRIVATE
-  "${DEVKITPRO}/libnx/include"
+  "${NX_ROOT}/include"
   "${DEVKITPRO}/portlibs/switch/include"
   "${CMAKE_SOURCE_DIR}/Externals/lsfg/include"
 )
@@ -79,6 +79,14 @@ target_link_libraries(dolphin-switch PRIVATE
   zstd::zstd
   ZLIB::ZLIB
 )
+
+if(DOLPHIN_SWITCH2)
+  # kaiHEN's JIT provider: libounce's jit* functions only weakly reference it.
+  target_link_libraries(dolphin-switch PRIVATE kaihen)
+  # Exit cleanup for the next program the loader runs in this process.
+  target_sources(dolphin-switch PRIVATE ExitCleanup.cpp ExitCleanup.h)
+  target_link_options(dolphin-switch PRIVATE -Wl,--wrap=__syscall_thread_create)
+endif()
 
 target_link_options(dolphin-switch PRIVATE
   -Wl,--gc-sections

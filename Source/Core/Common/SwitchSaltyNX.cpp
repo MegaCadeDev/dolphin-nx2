@@ -186,6 +186,11 @@ void run(void*) {
 }
 
 void saltynx_start(void) {
+#ifdef __SWITCH2__
+    // SaltyNX is a Switch 1 sysmodule. Its probing (resource limits, sm reset,
+    // named ports) ends the process under kaiHEN's game policy.
+    return;
+#endif
     if (running)
         return;
     frame_count.store(0, std::memory_order_relaxed);

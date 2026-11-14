@@ -1,0 +1,15 @@
+[31867487 ms] Dolphin diagnostics build started
+[31867489 ms] image base 0x0 end 0xae296a0 (size 0xae296a0)
+[31867491 ms] applet type 0
+[31867492 ms] process memory total 0x23c000000 (9152 MiB)
+[31867493 ms] process memory used 0x23bd38000 (9149 MiB)
+[31867494 ms] core mask 0x3f
+[31867495 ms] alias region size 0x2000000000
+[31867497 ms] heap region size 0x300000000
+[31867498 ms] aslr region size 0x7ff8000000
+[31867499 ms] kaiHEN ldr:ro session: present (0x0)
+[31867501 ms] main: entered
+[31867503 ms] main: reserving fastmem arena
+[31867504 ms] fastmem: arena window 0x6147e00000 (size 0x200000000)
+[31867505 ms] main: fastmem arena reserved
+[31867507 ms] main: starting SaltyNX

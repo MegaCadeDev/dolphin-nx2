@@ -8,6 +8,8 @@
 #include <array>
 #include <cstdlib>
 #include <cstring>
+#include <map>
+#include <mutex>
 #include <malloc.h>
 
 #include <switch.h>
@@ -19,6 +21,7 @@
 #include "Common/Logging/Log.h"
 #include "Common/MsgHandler.h"
 #include "Common/ScopeGuard.h"
+#include "Common/SwitchDiagnostics.h"
 
 namespace EMM
 {
@@ -39,6 +42,11 @@ constexpr unsigned SVC_UNMAP_PROCESS_CODE_MEMORY = 0x78;
 
 void* s_arena_window = nullptr;
 bool s_arena_window_in_use = false;
+// Fastmem views mapped with svcMapProcessMemory and not yet unmapped, by view
+// address: (offset into the code alias, size). The code alias can only be
+// unmapped once none is left, and until then the backing heap pages stay locked.
+std::map<void*, std::pair<s64, size_t>> s_views;
+std::mutex s_views_mutex;
 
 constexpr size_t LARGE_PAGE_SIZE = 0x200000;
 
@@ -59,6 +67,13 @@ struct FastmemSupport
 FastmemSupport DetectFastmemSupport()
 {
   FastmemSupport support;
+#ifdef DOLPHIN_SWITCH_DIAGNOSTICS
+  if (SwitchDiagnostics::IsFastmemDisabledByFile())
+  {
+    SWITCH_DIAG_MARK("fastmem: disabled by diag/no-fastmem");
+    return support;
+  }
+#endif
   constexpr std::array arena_syscalls = {
       SVC_SET_PROCESS_MEMORY_PERMISSION, SVC_MAP_PROCESS_MEMORY,
       SVC_UNMAP_PROCESS_MEMORY,          SVC_MAP_PROCESS_CODE_MEMORY,
@@ -144,7 +159,12 @@ FastmemSupport DetectFastmemSupport()
 
 const FastmemSupport& GetFastmemSupport()
 {
-  static const FastmemSupport support = DetectFastmemSupport();
+  static const FastmemSupport support = [] {
+    const FastmemSupport detected = DetectFastmemSupport();
+    SWITCH_DIAG_MARK("fastmem: arena support %d, read-only mappings %d", detected.arena,
+                     detected.read_only_mappings);
+    return detected;
+  }();
   return support;
 }
 }  // namespace
@@ -161,6 +181,8 @@ void ReserveArenaAddressSpace()
       s_arena_window = base;
   }
   virtmemUnlock();
+  SWITCH_DIAG_MARK("fastmem: arena window %p (size 0x%lx)", s_arena_window,
+                   static_cast<unsigned long>(ARENA_SIZE));
 }
 
 bool IsArenaSupported()
@@ -219,6 +241,8 @@ void MemArena::GrabSHMSegment(size_t size, std::string_view base_name)
 
   Result rc = svcMapProcessCodeMemory(envGetOwnProcessHandle(), (u64)m_rw_mirror,
                                       (u64)m_shm_buffer, aligned_size);
+  SWITCH_DIAG_MARK("fastmem: map code alias %p <- %p size 0x%lx: 0x%x", m_rw_mirror,
+                   m_shm_buffer, static_cast<unsigned long>(aligned_size), rc);
   if (R_FAILED(rc))
   {
     virtmemUnlock();
@@ -257,10 +281,42 @@ void MemArena::ReleaseSHMSegment()
 {
   if (m_rw_mirror)
   {
+    size_t leftover_views = 0;
+    size_t leftover_failures = 0;
+    {
+      std::lock_guard lock{s_views_mutex};
+      for (const auto& [view, mapping] : s_views)
+      {
+        ++leftover_views;
+        if (R_FAILED(svcUnmapProcessMemory(view, envGetOwnProcessHandle(),
+                                           (u64)m_code_mirror + mapping.first, mapping.second)))
+        {
+          ++leftover_failures;
+        }
+      }
+      s_views.clear();
+    }
     virtmemLock();
-    svcUnmapProcessCodeMemory(envGetOwnProcessHandle(), (u64)m_rw_mirror, (u64)m_shm_buffer,
-                              m_shm_size);
+    const Result rc = svcUnmapProcessCodeMemory(envGetOwnProcessHandle(), (u64)m_rw_mirror,
+                                                (u64)m_shm_buffer, m_shm_size);
     virtmemUnlock();
+    SWITCH_DIAG_MARK("fastmem: unmap code alias %p size 0x%lx: 0x%x (%zu leftover views "
+                     "unmapped first, %zu failed)",
+                     m_rw_mirror, static_cast<unsigned long>(m_shm_size), rc, leftover_views,
+                     leftover_failures);
+    (void)leftover_views;
+    (void)leftover_failures;
+    if (R_FAILED(rc))
+    {
+      // The heap pages are still locked as the alias's source: handing them
+      // back to the allocator would corrupt whatever reuses them.
+      ERROR_LOG_FMT(MEMMAP, "Switch: svcUnmapProcessCodeMemory(RW alias) failed: 0x{:X}", rc);
+      m_rw_mirror = nullptr;
+      m_code_mirror = nullptr;
+      m_shm_buffer = nullptr;
+      m_shm_size = 0;
+      return;
+    }
     m_rw_mirror = nullptr;
     m_code_mirror = nullptr;
   }
@@ -414,6 +470,10 @@ void* MemArena::MapInMemoryRegion(s64 offset, size_t size, void* base, bool writ
     return nullptr;
   }
 
+  {
+    std::lock_guard lock{s_views_mutex};
+    s_views[base] = {offset, aligned_size};
+  }
   return base;
 }
 
@@ -446,8 +506,22 @@ void MemArena::UnmapFromMemoryRegion(void* view, size_t size, s64 shm_offset)
   size_t aligned_size = (size + 0xFFF) & ~0xFFF;
   if (shm_offset >= 0)
   {
-    svcUnmapProcessMemory(view, envGetOwnProcessHandle(),
-                          (u64)m_code_mirror + shm_offset, aligned_size);
+    const Result rc = svcUnmapProcessMemory(view, envGetOwnProcessHandle(),
+                                            (u64)m_code_mirror + shm_offset, aligned_size);
+    if (R_SUCCEEDED(rc))
+    {
+      std::lock_guard lock{s_views_mutex};
+      s_views.erase(view);
+    }
+    else
+    {
+      static int s_logged_unmap_failures = 0;
+      if (s_logged_unmap_failures++ < 8)
+      {
+        SWITCH_DIAG_MARK("fastmem: unmap view %p size 0x%lx: 0x%x", view,
+                         static_cast<unsigned long>(aligned_size), rc);
+      }
+    }
   }
   else
   {

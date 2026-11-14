@@ -122,6 +122,8 @@ option(ENABLE_CCACHE "Enables CCache compiler cache" OFF)
 option(DOLPHIN_SWITCH "Build the standalone Nintendo Switch libnx frontend" OFF)
 option(DOLPHIN_SWITCH_DEKO3D_RUNTIME "Build the embedded Deko3D game runtime" OFF)
 option(DOLPHIN_SWITCH_BUNDLE_DEKO3D "Embed the Deko3D runtime in dolphin.nro" ON)
+option(DOLPHIN_SWITCH2 "Build the Switch frontend for Switch 2 with libounce" OFF)
+option(DOLPHIN_SWITCH_DIAGNOSTICS "Write boot, stderr and crash logs to sdmc:/switch/dolphin/diag" OFF)
 
 # Maintainers: if you consider blanket disabling this for your users, please
 # consider the following points:
@@ -155,9 +157,33 @@ if(DOLPHIN_SWITCH)
   message(STATUS "Building the standalone Nintendo Switch libnx frontend")
   include(SwitchPGO)
 
+  if(DOLPHIN_SWITCH2)
+    message(STATUS "Targeting Switch 2 (libounce, OunceVK)")
+    # OunceVK in the Switch 2 portlibs replaces the Mesa SDK. Deko3D and the
+    # bundled optimization profile are Switch 1 only.
+    set(DOLPHIN_SWITCH_MESA_SDK_ROOT "$ENV{DEVKITPRO}/portlibs/switch2" CACHE PATH
+        "OunceVK prefix" FORCE)
+    set(DOLPHIN_SWITCH_DEKO3D_RUNTIME OFF CACHE BOOL "" FORCE)
+    set(DOLPHIN_SWITCH_BUNDLE_DEKO3D OFF CACHE BOOL "" FORCE)
+    set(DOLPHIN_SWITCH_PGO OFF CACHE BOOL "" FORCE)
+
+    # One localized OunceVK archive provides both Vulkan and EGL.
+    set(_ouncevk_source "$ENV{DEVKITPRO}/portlibs/switch2/lib/libouncevk-gl.a")
+    set(DOLPHIN_SWITCH_OUNCEVK_ARCHIVE "${CMAKE_BINARY_DIR}/ouncevk/libouncevk_local.a")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_ouncevk_source}")
+    if(NOT EXISTS "${DOLPHIN_SWITCH_OUNCEVK_ARCHIVE}" OR
+       "${_ouncevk_source}" IS_NEWER_THAN "${DOLPHIN_SWITCH_OUNCEVK_ARCHIVE}")
+      execute_process(
+        COMMAND bash "${CMAKE_SOURCE_DIR}/Tools/Switch/prepare_ouncevk.sh"
+                "${CMAKE_BINARY_DIR}/ouncevk"
+        COMMAND_ERROR_IS_FATAL ANY)
+    endif()
+  endif()
+
   set(DOLPHIN_SWITCH_MESA_SDK_ROOT "" CACHE PATH
       "Extracted unified Mesa Switch SDK prefix")
-  if(NOT IS_DIRECTORY "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/lib/cmake/OpenGL")
+  if(DOLPHIN_SWITCH2)
+  elseif(NOT IS_DIRECTORY "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/lib/cmake/OpenGL")
     message(FATAL_ERROR
       "DOLPHIN_SWITCH_MESA_SDK_ROOT must point to the unified Mesa Switch SDK prefix")
   endif()
@@ -207,6 +233,12 @@ if(DOLPHIN_SWITCH)
     MBEDTLS_NO_PLATFORM_ENTROPY
     MBEDTLS_USER_CONFIG_FILE="DolphinSwitch/MbedTLSConfig.h"
   )
+  if(DOLPHIN_SWITCH_DIAGNOSTICS)
+    message(STATUS "Switch diagnostics: logs in sdmc:/switch/dolphin/diag")
+    add_compile_definitions(DOLPHIN_SWITCH_DIAGNOSTICS)
+    # Line tables for tools/symbolize.sh; elf2nro leaves them out of the NRO.
+    add_compile_options(-g1)
+  endif()
 endif()
 
 if(APPLE)
@@ -578,7 +610,18 @@ if(ENABLE_X11)
 endif()
 
 if(ENABLE_EGL)
-  if(DOLPHIN_SWITCH)
+  if(DOLPHIN_SWITCH2)
+    add_library(SwitchEGL STATIC IMPORTED GLOBAL)
+    set_target_properties(SwitchEGL PROPERTIES
+      IMPORTED_LOCATION "${DOLPHIN_SWITCH_OUNCEVK_ARCHIVE}"
+      INTERFACE_INCLUDE_DIRECTORIES "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/include"
+      INTERFACE_LINK_LIBRARIES "stdc++;m"
+    )
+    add_library(OpenGL::EGL ALIAS SwitchEGL)
+    set(EGL_FOUND TRUE)
+    set(EGL_INCLUDE_DIRS "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/include")
+    set(EGL_LIBRARIES OpenGL::EGL)
+  elseif(DOLPHIN_SWITCH)
     find_package(OpenGL CONFIG REQUIRED
       PATHS "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/lib/cmake/OpenGL"
       NO_DEFAULT_PATH)

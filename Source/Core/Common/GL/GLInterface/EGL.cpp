@@ -387,8 +387,10 @@ void GLContextEGL::Update()
       eglQuerySurface(m_egl_display, m_egl_surface, EGL_HEIGHT, &current_height) &&
       (current_width != target_width || current_height != target_height))
   {
+    // Declared here: OunceVK's EGL headers don't have this Horizon Mesa extension.
+    using ResizeSurfaceMESA = EGLBoolean(EGLAPIENTRYP)(EGLDisplay, EGLSurface, EGLint, EGLint);
     const auto resize_surface =
-        reinterpret_cast<PFNEGLRESIZESURFACEMESAPROC>(eglGetProcAddress("eglResizeSurfaceMESA"));
+        reinterpret_cast<ResizeSurfaceMESA>(eglGetProcAddress("eglResizeSurfaceMESA"));
     if (!resize_surface ||
         resize_surface(m_egl_display, m_egl_surface, target_width, target_height) != EGL_TRUE)
     {

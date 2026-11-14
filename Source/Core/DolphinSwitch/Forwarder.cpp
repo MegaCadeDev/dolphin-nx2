@@ -760,7 +760,17 @@ void patch_nacp(NacpStruct &nacp, const std::string &name, const std::string &au
 {
     // Keep the template display version. An empty author preserves the template metadata, which
     // is used by the launcher-only shortcut; per-game shortcuts may override it in the wizard.
+#ifdef __SWITCH2__
+    // libounce's NACP layout keeps titles in a union that may hold compressed data
+    // (TitlesDataFormat 1). Store them uncompressed so the entries below are valid.
+    if (nacp.titles_data_format != 0) {
+        std::memset(&nacp.lang_data, 0, sizeof(nacp.lang_data));
+        nacp.titles_data_format = 0;
+    }
+    for (auto &lang : nacp.lang_data.lang) {
+#else
     for (auto &lang : nacp.lang) {
+#endif
         if (!name.empty())
             copy_nacp_text(lang.name, sizeof(lang.name), name);
         if (!author.empty())

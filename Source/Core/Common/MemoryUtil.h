@@ -7,6 +7,8 @@
 #include <cstddef>
 #include <string>
 
+#include "Common/CommonTypes.h"
+
 namespace Common
 {
 struct ExecutableMemory
@@ -16,6 +18,13 @@ struct ExecutableMemory
 };
 
 ExecutableMemory AllocateExecutableMemory(size_t size);
+
+#ifdef __SWITCH2__
+// kaiHEN's JIT writes go to a staging buffer, not an alias of the RX mapping.
+// Copies [rw_start, rw_end) of an executable allocation to its RX view and
+// invalidates the matching instruction cache range on the calling thread.
+void PublishExecutableMemory(const u8* rw_start, const u8* rw_end);
+#endif
 
 // These two functions control the executable/writable state of the W^X memory
 // allocations. More detailed documentation about them is in the .cpp file.

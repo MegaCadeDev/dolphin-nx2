@@ -27,6 +27,9 @@
 #ifdef __APPLE__
 #include <libkern/OSCacheControl.h>
 #endif
+#ifdef __SWITCH2__
+#include "Common/MemoryUtil.h"
+#endif
 
 namespace Arm64Gen
 {
@@ -201,6 +204,10 @@ void ARM64XEmitter::FlushIcacheSection(u8* dcache_start, u8* dcache_end, u8* ica
   sys_cache_control(kCacheFunctionPrepareForExecution, icache_start, icache_end - icache_start);
 #elif defined(WIN32)
   FlushInstructionCache(GetCurrentProcess(), icache_start, icache_end - icache_start);
+#elif defined(__SWITCH2__)
+  // RW is kaiHEN's staging buffer: publishing copies it to RX, cleans the data
+  // cache and invalidates this thread's instruction cache for the range.
+  Common::PublishExecutableMemory(dcache_start, dcache_end);
 #else
   size_t isize, dsize;
   GetArm64CacheLineSizes(isize, dsize);

@@ -7,6 +7,7 @@
 #include <cstdlib>
 
 #include "Common/CommonFuncs.h"
+#include "Common/SwitchDiagnostics.h"
 #include "Common/MsgHandler.h"
 
 #include "Core/MachineContext.h"
@@ -32,6 +33,8 @@ void EMM::SetLazyRegionInfo(uintptr_t base, size_t size)
   {
     s_lazy_region_size.store(size, std::memory_order_relaxed);
     s_lazy_region_base.store(base, std::memory_order_release);
+    SWITCH_DIAG_MARK("fastmem: lazy region 0x%lx size 0x%lx", static_cast<unsigned long>(base),
+                     static_cast<unsigned long>(size));
   }
 }
 #endif
@@ -481,6 +484,9 @@ extern "C" void __libnx_exception_handler(ThreadExceptionDump* ctx)
     RestoreContextAndJump(ctx);
   }
 
+#ifdef DOLPHIN_SWITCH_DIAGNOSTICS
+  Common::SwitchDiagnostics::WriteCrashReport(ctx);
+#endif
   svcExitProcess();
   __builtin_unreachable();
 }

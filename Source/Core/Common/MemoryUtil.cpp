@@ -9,6 +9,7 @@
 #include "Common/CommonFuncs.h"
 #include "Common/Logging/Log.h"
 #include "Common/MsgHandler.h"
+#include "Common/SwitchDiagnostics.h"
 
 #ifdef __SWITCH__
 #include <map>
@@ -16,6 +17,9 @@
 
 #include <malloc.h>
 #include <switch.h>
+#ifdef __SWITCH2__
+#include <kaihen.h>
+#endif
 
 namespace
 {
@@ -61,8 +65,15 @@ ExecutableMemory AllocateExecutableMemory(size_t size)
   rx_ptr = ptr;
 #elif defined(__SWITCH__)
   Jit jit{};
+  SWITCH_DIAG_MARK("jit: jitCreate size 0x%lx", static_cast<unsigned long>(size));
   Result result = jitCreate(&jit, size);
+  SWITCH_DIAG_MARK("jit: jitCreate 0x%x type %d", result, static_cast<int>(jit.type));
+#ifdef __SWITCH2__
+  // kaiHEN's backend keeps separate RW staging and RX views whatever type it reports.
+  if (R_FAILED(result))
+#else
   if (R_FAILED(result) || jit.type != JitType_CodeMemory)
+#endif
   {
     if (R_SUCCEEDED(result))
       jitClose(&jit);
@@ -71,6 +82,7 @@ ExecutableMemory AllocateExecutableMemory(size_t size)
   }
 
   result = jitTransitionToExecutable(&jit);
+  SWITCH_DIAG_MARK("jit: jitTransitionToExecutable 0x%x", result);
   if (R_FAILED(result))
   {
     jitClose(&jit);
@@ -107,6 +119,40 @@ ExecutableMemory AllocateExecutableMemory(size_t size)
 
   return {ptr, rx_ptr};
 }
+
+#ifdef __SWITCH2__
+void PublishExecutableMemory(const u8* rw_start, const u8* rw_end)
+{
+  if (rw_start == rw_end)
+    return;
+
+  std::lock_guard lock{s_switch_jit_mutex};
+  // Allocations are keyed by their RW address; find the one containing rw_start.
+  auto it = s_switch_jit_allocations.upper_bound(const_cast<u8*>(rw_start));
+  if (it == s_switch_jit_allocations.begin())
+  {
+    PanicAlertFmt("Publishing JIT code outside any allocation: {}", fmt::ptr(rw_start));
+    return;
+  }
+  --it;
+  const u8* base = static_cast<const u8*>(it->first);
+  Jit& jit = it->second.jit;
+  if (rw_end > base + jit.size)
+  {
+    PanicAlertFmt("Publishing JIT code past the end of its allocation: {}", fmt::ptr(rw_end));
+    return;
+  }
+
+  const KaihenJitRange range{static_cast<u64>(rw_start - base),
+                             static_cast<u64>(rw_end - rw_start)};
+  const Result result = kaihenJitPublishRanges(&jit, &range, 1);
+  if (R_FAILED(result))
+  {
+    SWITCH_DIAG_MARK("jit: kaihenJitPublishRanges failed 0x%x", result);
+    PanicAlertFmt("kaihenJitPublishRanges failed: 0x{:08x}", result);
+  }
+}
+#endif
 // This function is used to provide a counter for the JITPageWrite*Execute*
 // functions to enable nesting. The static variable is wrapped in a a function
 // to allow those functions to be called inside of the constructor of a static
@@ -267,6 +313,7 @@ void FreeExecutableMemory(void* ptr, size_t size)
   }
 
   const Result result = jitClose(&jit);
+  SWITCH_DIAG_MARK("jit: jitClose size 0x%lx: 0x%x", static_cast<unsigned long>(jit.size), result);
   if (R_FAILED(result))
     ERROR_LOG_FMT(MEMMAP, "jitClose failed: 0x{:08x}", result);
 #else

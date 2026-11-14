@@ -33,6 +33,7 @@
 #include "Common/SwitchSaltyNX.h"
 #include "Common/Thread.h"
 #include "Common/WindowSystemInfo.h"
+#include "Common/SwitchDiagnostics.h"
 #include "Core/AchievementManager.h"
 #include "Core/Boot/Boot.h"
 #include "Core/BootManager.h"
@@ -79,6 +80,10 @@
 #include "VideoCommon/Present.h"
 #include "VideoCommon/VideoBackendBase.h"
 #include "VideoCommon/VideoConfig.h"
+
+#ifdef __SWITCH2__
+#include "DolphinSwitch/ExitCleanup.h"
+#endif
 #ifdef HAS_DEKO3D
 #include "VideoBackends/Deko3D/DKFrameGenerationShaders.h"
 #endif
@@ -119,6 +124,7 @@ bool ScheduleLauncherRestart(const std::string& launcher_path)
 
   const std::string arguments = launcher_path + " " + std::string(VULKAN_RETURN_ARGUMENT);
   const Result result = envSetNextLoad(launcher_path.c_str(), arguments.c_str());
+  SWITCH_DIAG_MARK("main: scheduled relaunch of %s: 0x%x", launcher_path.c_str(), result);
   if (R_FAILED(result))
     std::fprintf(stderr, "[Dolphin Switch] failed to schedule launcher restart: %08x\n",
                  static_cast<unsigned int>(result));
@@ -225,6 +231,7 @@ bool SwitchMsgAlertHandler(const char* caption, const char* text, bool yes_no,
 {
   const std::string safe_caption = caption && *caption ? caption : "Dolphin";
   const std::string safe_text = text ? text : "Unknown Dolphin error";
+  SWITCH_DIAG_MARK("alert: %s: %s", safe_caption.c_str(), safe_text.c_str());
   {
     std::lock_guard lock{s_alert_mutex};
     s_pending_alerts.push_back({safe_caption, safe_text});
@@ -273,6 +280,7 @@ void AppletHook(AppletHookType hook, void*)
     s_operation_mode_generation.fetch_add(1, std::memory_order_acq_rel);
     break;
   case AppletHookType_OnExitRequest:
+    SWITCH_DIAG_MARK("applet: exit requested by the system");
     s_applet_exit_requested.store(true, std::memory_order_release);
     s_session_running.store(false, std::memory_order_release);
     break;
@@ -1482,18 +1490,43 @@ SessionResult RunGameSession(const DolphinSwitch::LaunchRequest& request,
 
 int main(int argc, char** argv)
 {
+  SWITCH_DIAG_MARK("main: entered (argc %d)", argc);
+  for (int index = 0; index < argc; ++index)
+    SWITCH_DIAG_MARK("main: argv[%d] = %s", index, argv[index] ? argv[index] : "(null)");
+  SWITCH_DIAG_MARK("main: reserving fastmem arena");
   Common::HorizonFastmem::ReserveArenaAddressSpace();
+  SWITCH_DIAG_MARK("main: fastmem arena reserved");
 
   // Closing from HOME must run the normal shutdown, which saves the NAND and SYSCONF.
   const bool exit_locked = R_SUCCEEDED(appletLockExit());
   Common::ScopeGuard exit_lock_guard([exit_locked] {
+    SWITCH_DIAG_MARK("exit: exit_lock_guard");
+#ifdef DOLPHIN_SWITCH_DIAGNOSTICS
+    Common::SwitchDiagnostics::LogMemoryMap("before releasing the exit lock");
+#endif
+#ifdef __SWITCH2__
+    if (exit_locked)
+      DolphinSwitch::ExitCleanup::ReleaseExitLockLast();
+#else
     if (exit_locked)
       (void)appletUnlockExit();
+#endif
+    SWITCH_DIAG_MARK("exit: exit_lock_guard done");
   });
 
+  SWITCH_DIAG_MARK("main: starting SaltyNX");
   saltynx_start();
-  Common::ScopeGuard saltynx_guard([] { saltynx_stop(); });
-  Common::ScopeGuard audio_guard([] { DolphinSwitch::Audio::ShutdownSharedAudio(); });
+  SWITCH_DIAG_MARK("main: SaltyNX started");
+  Common::ScopeGuard saltynx_guard([] {
+    SWITCH_DIAG_MARK("exit: saltynx_guard");
+    saltynx_stop();
+    SWITCH_DIAG_MARK("exit: saltynx_guard done");
+  });
+  Common::ScopeGuard audio_guard([] {
+    SWITCH_DIAG_MARK("exit: audio_guard");
+    DolphinSwitch::Audio::ShutdownSharedAudio();
+    SWITCH_DIAG_MARK("exit: audio_guard done");
+  });
 
   const std::string_view self_path =
       argc > 0 && argv[0] ? std::string_view(argv[0]) : std::string_view{};
@@ -1537,14 +1570,22 @@ int main(int argc, char** argv)
 #endif
 
   const Result romfs_result = romfsInit();
+  SWITCH_DIAG_MARK("main: romfsInit 0x%x", romfs_result);
   bool romfs_mounted = R_SUCCEEDED(romfs_result);
   bool sockets_initialized = false;
   Common::ScopeGuard platform_guard([&] {
+    SWITCH_DIAG_MARK("exit: platform_guard");
     DolphinSwitch::ShutdownLauncherStorage();
+#ifdef DOLPHIN_SWITCH_DIAGNOSTICS
+    if (sockets_initialized && !Common::SwitchDiagnostics::KeepSocketsForNxlink())
+      socketExit();
+#else
     if (sockets_initialized)
       socketExit();
+#endif
     if (romfs_mounted)
       romfsExit();
+    SWITCH_DIAG_MARK("exit: platform_guard done");
   });
   if (!romfs_mounted)
   {
@@ -1565,6 +1606,7 @@ int main(int argc, char** argv)
   if (!self_path.empty())
     DolphinSwitch::Forwarder::SetSelfPath(launcher_path);
 
+  SWITCH_DIAG_MARK("main: applet mode %d", IsAppletMode() ? 1 : 0);
   if (IsAppletMode())
   {
 #ifdef DOLPHIN_SWITCH_DEKO3D_RUNTIME
@@ -1577,11 +1619,27 @@ int main(int argc, char** argv)
   }
 
   sockets_initialized = R_SUCCEEDED(socketInitializeDefault());
+#ifdef DOLPHIN_SWITCH_DIAGNOSTICS
+  if (sockets_initialized)
+    Common::SwitchDiagnostics::ConnectNxlink();
+#endif
+  SWITCH_DIAG_MARK("main: UICommon::Init");
   UICommon::Init();
-  Common::ScopeGuard ui_common_guard([] { UICommon::Shutdown(); });
+#ifdef DOLPHIN_SWITCH_DIAGNOSTICS
+  Common::SwitchDiagnostics::EnableDolphinLogging();
+#endif
+  Common::ScopeGuard ui_common_guard([] {
+    SWITCH_DIAG_MARK("exit: ui_common_guard");
+    UICommon::Shutdown();
+    SWITCH_DIAG_MARK("exit: ui_common_guard done");
+  });
   if (Config::Get(Config::RA_ENABLED))
     AchievementManager::GetInstance().Init(nullptr);
-  Common::ScopeGuard achievement_guard([] { AchievementManager::GetInstance().Shutdown(); });
+  Common::ScopeGuard achievement_guard([] {
+    SWITCH_DIAG_MARK("exit: achievement_guard");
+    AchievementManager::GetInstance().Shutdown();
+    SWITCH_DIAG_MARK("exit: achievement_guard done");
+  });
   if (DolphinSwitch::ApplyAutoLanguageDefaults())
     Config::Save();
   (void)File::CreateFullPath(File::GetUserPath(D_CACHE_IDX));
@@ -1592,18 +1650,27 @@ int main(int argc, char** argv)
     NWindow* const launcher_window = nwindowGetDefault();
     const WindowSystemInfo launcher_wsi{WindowSystemType::Switch, nullptr, launcher_window,
                                         launcher_window};
+    SWITCH_DIAG_MARK("main: PopulateBackendInfo (window %p)", static_cast<void*>(launcher_window));
     VideoBackendBase::PopulateBackendInfo(launcher_wsi);
+    SWITCH_DIAG_MARK("main: PopulateBackendInfo done");
   }
   s_host_focused.store(appletGetFocusState() == AppletFocusState_InFocus,
                        std::memory_order_release);
   (void)appletSetFocusHandlingMode(AppletFocusHandlingMode_SuspendHomeSleepNotify);
   AppletHookCookie applet_hook_cookie{};
   appletHook(&applet_hook_cookie, AppletHook, nullptr);
-  Common::ScopeGuard applet_hook_guard([&] { appletUnhook(&applet_hook_cookie); });
+  Common::ScopeGuard applet_hook_guard([&] {
+    SWITCH_DIAG_MARK("exit: applet_hook_guard");
+    appletUnhook(&applet_hook_cookie);
+    SWITCH_DIAG_MARK("exit: applet_hook_guard done");
+  });
 
   DolphinSwitch::RuntimeOverlay::InitializeRendererHook();
-  Common::ScopeGuard overlay_renderer_guard(
-      [] { DolphinSwitch::RuntimeOverlay::ShutdownRendererHook(); });
+  Common::ScopeGuard overlay_renderer_guard([] {
+    SWITCH_DIAG_MARK("exit: overlay_renderer_guard");
+    DolphinSwitch::RuntimeOverlay::ShutdownRendererHook();
+    SWITCH_DIAG_MARK("exit: overlay_renderer_guard done");
+  });
 
 #ifdef DOLPHIN_SWITCH_DEKO3D_RUNTIME
   std::optional<DolphinSwitch::LaunchRequest> direct_request = runtime_request->game;
@@ -1630,7 +1697,9 @@ int main(int argc, char** argv)
 #ifdef DOLPHIN_SWITCH_DEKO3D_RUNTIME
       break;
 #else
+      SWITCH_DIAG_MARK("main: RunLauncher");
       request = DolphinSwitch::RunLauncher(std::move(launcher_message), launcher_path);
+      SWITCH_DIAG_MARK("main: RunLauncher returned (request %d)", request ? 1 : 0);
       launcher_message.clear();
 #endif
     }
@@ -1664,7 +1733,11 @@ int main(int argc, char** argv)
       break;
     }
 
+    SWITCH_DIAG_MARK("main: RunGameSession");
     const SessionResult result = RunGameSession(*request, launcher_path);
+    SWITCH_DIAG_MARK("main: RunGameSession returned (exit %d, restart %d): %s",
+                     result.exit_application ? 1 : 0, result.restart_launcher ? 1 : 0,
+                     result.launcher_message.c_str());
     if (result.exit_application)
       break;
 #ifdef DOLPHIN_SWITCH_DEKO3D_RUNTIME
@@ -1679,5 +1752,6 @@ int main(int argc, char** argv)
     launcher_message = result.launcher_message;
   }
 
+  SWITCH_DIAG_MARK("main: returning");
   return EXIT_SUCCESS;
 }

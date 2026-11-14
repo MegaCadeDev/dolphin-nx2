@@ -4,6 +4,8 @@
 #define VMA_IMPLEMENTATION
 #include "VideoBackends/Vulkan/VulkanLoader.h"
 
+#include "Common/SwitchDiagnostics.h"
+
 #if defined(ANDROID)
 #include <adrenotools/driver.h>
 #include <dlfcn.h>
@@ -108,7 +110,10 @@ bool LoadVulkanLibrary(bool force_system_library)
   (void)force_system_library;
 
   uint32_t icd_version = 7;
+  SWITCH_DIAG_MARK("vulkan: negotiating ICD interface");
   const VkResult negotiation_result = vk_icdNegotiateLoaderICDInterfaceVersion(&icd_version);
+  SWITCH_DIAG_MARK("vulkan: ICD negotiation %d (version %u)", static_cast<int>(negotiation_result),
+                   icd_version);
   if (negotiation_result != VK_SUCCESS)
   {
     ERROR_LOG_FMT(VIDEO, "Vulkan: NVK ICD interface negotiation failed: {}",
@@ -137,6 +142,23 @@ bool LoadVulkanLibrary(bool force_system_library)
       vk_icdGetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceLayerProperties"));
   vkEnumerateInstanceVersion = reinterpret_cast<PFN_vkEnumerateInstanceVersion>(
       vk_icdGetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceVersion"));
+  SWITCH_DIAG_MARK("vulkan: global dispatch GIPA=%d CreateInstance=%d Extensions=%d Layers=%d "
+                   "Version=%d",
+                   vkGetInstanceProcAddr != nullptr, vkCreateInstance != nullptr,
+                   vkEnumerateInstanceExtensionProperties != nullptr,
+                   vkEnumerateInstanceLayerProperties != nullptr,
+                   vkEnumerateInstanceVersion != nullptr);
+#ifdef __SWITCH2__
+  // Layer enumeration belongs to the Vulkan loader, and Horizon has none, so
+  // OunceVK's ICD table leaves it null. With no loader there are no layers.
+  if (!vkEnumerateInstanceLayerProperties)
+  {
+    vkEnumerateInstanceLayerProperties = [](uint32_t* count, VkLayerProperties*) -> VkResult {
+      *count = 0;
+      return VK_SUCCESS;
+    };
+  }
+#endif
 
   if (!vkGetInstanceProcAddr || !vkCreateInstance || !vkEnumerateInstanceExtensionProperties ||
       !vkEnumerateInstanceLayerProperties)
