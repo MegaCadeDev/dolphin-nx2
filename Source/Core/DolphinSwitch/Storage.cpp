@@ -1489,6 +1489,14 @@ std::string SmbBrowsePath(const SmbShare& share)
 
 bool InitializeUsb(std::string* error)
 {
+#ifdef __SWITCH2__
+  // Under kaiHEN, opening USB host storage (libusbhsfs on usb:hs) leaves the
+  // system in a state where the next homebrew, hbmenu included, starts to a
+  // black screen until kaiHEN is started again, however Dolphin exits.
+  if (error)
+    *error = "USB drives are not supported on Switch 2 yet";
+  return false;
+#endif
   {
     std::lock_guard lock(s_mount_mutex);
     if (s_usb_initialized)

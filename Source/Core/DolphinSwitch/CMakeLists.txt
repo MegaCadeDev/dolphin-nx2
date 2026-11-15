@@ -86,6 +86,11 @@ if(DOLPHIN_SWITCH2)
   # Exit cleanup for the next program the loader runs in this process.
   target_sources(dolphin-switch PRIVATE ExitCleanup.cpp ExitCleanup.h)
   target_link_options(dolphin-switch PRIVATE -Wl,--wrap=__syscall_thread_create)
+  if(DOLPHIN_SWITCH_DIAGNOSTICS)
+    # Logs every thread and service lookup (ExitCleanup.cpp).
+    target_link_options(dolphin-switch PRIVATE -Wl,--wrap=threadCreate
+                        -Wl,--wrap=smGetServiceWrapper -Wl,--wrap=smGetServiceOriginal)
+  endif()
 endif()
 
 target_link_options(dolphin-switch PRIVATE

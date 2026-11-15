@@ -203,6 +203,12 @@ __attribute__((constructor(101))) void Initialize()
 }
 }  // namespace
 
+u64 ElfOffset(const void* address)
+{
+  const u64 value = reinterpret_cast<u64>(address);
+  return InImage(value) ? ImageOffset(value) : 0;
+}
+
 void Mark(const char* format, ...)
 {
   char message[256];
@@ -320,6 +326,17 @@ bool IsFastmemDisabledByFile()
 {
   struct stat info{};
   return stat("sdmc:/switch/dolphin/diag/no-fastmem", &info) == 0;
+}
+
+bool IsDisabledByFile(const char* name)
+{
+  char path[96];
+  std::snprintf(path, sizeof(path), "%s/%s", DIAG_DIRECTORY, name);
+  struct stat info{};
+  const bool disabled = stat(path, &info) == 0;
+  if (disabled)
+    Mark("test switch: %s is set, leaving it off", name);
+  return disabled;
 }
 
 void EnableDolphinLogging()

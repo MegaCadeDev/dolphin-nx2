@@ -12,6 +12,7 @@
 
 #include "AudioCommon/Mixer.h"
 #include "Common/Logging/Log.h"
+#include "Common/SwitchDiagnostics.h"
 #include "Common/Thread.h"
 
 namespace DolphinSwitch::Audio
@@ -163,7 +164,7 @@ void CloseSharedDevice(bool shutdown_subsystem)
 
 bool InitializeFrontendAudio()
 {
-  if (!EnsureSharedDevice())
+  if (SWITCH_DIAG_DISABLED("no-audio") || !EnsureSharedDevice())
     return false;
 
   SDL_LockAudioDevice(s_device);

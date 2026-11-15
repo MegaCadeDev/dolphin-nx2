@@ -1618,7 +1618,9 @@ int main(int argc, char** argv)
 #endif
   }
 
-  sockets_initialized = R_SUCCEEDED(socketInitializeDefault());
+  // diag/no-network: no sockets, so no cover downloads, update check or SMB.
+  sockets_initialized = !SWITCH_DIAG_DISABLED("no-network") &&
+                        R_SUCCEEDED(socketInitializeDefault());
 #ifdef DOLPHIN_SWITCH_DIAGNOSTICS
   if (sockets_initialized)
     Common::SwitchDiagnostics::ConnectNxlink();

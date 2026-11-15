@@ -63,3 +63,436 @@
 [  915807 ms]   0x8000000000 size 0xffffff8000000000 type 0x10 attr 0x0 perm 0x0 ipc 0 dev 0
 [  915809 ms] memory map end: 16 regions listed, 0 skipped, plain heap 0x2365d0000, used 0x23bd38000
 [  915810 ms] memory map verdict (before releasing the exit lock): 3 region(s) that can lock memory for the next program
+
+========== new run ==========
+[ 1053481 ms] Dolphin diagnostics build started
+[ 1053483 ms] image base 0x8000000 end 0x12e2f710 (size 0xae2f710)
+[ 1053484 ms] applet type 0
+[ 1053485 ms] process memory total 0x23c000000 (9152 MiB)
+[ 1053487 ms] process memory used 0x23bd38000 (9149 MiB)
+[ 1053488 ms] core mask 0x3f
+[ 1053489 ms] alias region size 0x2000000000
+[ 1053490 ms] heap region size 0x300000000
+[ 1053492 ms] aslr region size 0x7ff8000000
+[ 1053493 ms] kaiHEN ldr:ro session: present (0x0)
+[ 1053495 ms] main: entered (argc 1)
+[ 1053497 ms] main: argv[0] = sdmc:/switch/dolphin.nro
+[ 1053498 ms] main: reserving fastmem arena
+[ 1053499 ms] fastmem: arena window 0x7468000000 (size 0x200000000)
+[ 1053500 ms] main: fastmem arena reserved
+[ 1053502 ms] main: starting SaltyNX
+[ 1053503 ms] main: SaltyNX started
+[ 1053506 ms] main: romfsInit 0x0
+[ 1053510 ms] main: applet mode 0
+[ 1053512 ms] main: UICommon::Init
+[ 1053622 ms] Dolphin console logging enabled (effective level 4)
+[ 1053625 ms] main: PopulateBackendInfo (window 0xae28c68)
+[ 1053626 ms] vulkan: negotiating ICD interface
+[ 1053628 ms] vulkan: ICD negotiation 0 (version 7)
+[ 1053629 ms] vulkan: global dispatch GIPA=1 CreateInstance=1 Extensions=1 Layers=0 Version=1
+[ 1053668 ms] main: PopulateBackendInfo done
+[ 1053670 ms] main: RunLauncher
+[ 1057787 ms] applet: exit requested by the system
+[ 1058030 ms] main: RunLauncher returned (request 0)
+[ 1058033 ms] main: returning
+[ 1058034 ms] exit: overlay_renderer_guard
+[ 1058035 ms] exit: overlay_renderer_guard done
+[ 1058037 ms] exit: applet_hook_guard
+[ 1058038 ms] exit: applet_hook_guard done
+[ 1058039 ms] exit: achievement_guard
+[ 1058041 ms] exit: achievement_guard done
+[ 1058042 ms] exit: ui_common_guard
+[ 1058044 ms] exit: ui_common_guard done
+[ 1058045 ms] exit: platform_guard
+[ 1058046 ms] exit: platform_guard done
+[ 1058048 ms] exit: audio_guard
+[ 1058132 ms] exit: audio_guard done
+[ 1058134 ms] exit: saltynx_guard
+[ 1058135 ms] exit: saltynx_guard done
+[ 1058137 ms] exit: exit_lock_guard
+[ 1058138 ms] memory map (before releasing the exit lock):
+[ 1058139 ms]   0x0008000000 size 0x001864000 type 0x08 attr 0x0 perm 0x5 ipc 0 dev 0 (image)
+[ 1058140 ms]   0x0009864000 size 0x000920000 type 0x08 attr 0x0 perm 0x1 ipc 0 dev 0 (image)
+[ 1058142 ms]   0x000a184000 size 0x000122000 type 0x09 attr 0x10 perm 0x1 ipc 0 dev 0 (image)
+[ 1058143 ms]   0x000a2a6000 size 0x00001e000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[ 1058144 ms]   0x000a2c4000 size 0x000b6c000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[ 1058146 ms]   0x145de13000 size 0x000001000 type 0x0c attr 0x0 perm 0x3 ipc 0 dev 0
+[ 1058147 ms]   0x2b62060000 size 0x000001000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[ 1058148 ms]   0x5db0bcb000 size 0x000010000 type 0x0b attr 0x0 perm 0x3 ipc 0 dev 0
+[ 1058149 ms]   0x5fac800000 size 0x0022c4000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[ 1058151 ms]   0x5faeac4000 size 0x000b6c000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[ 1058152 ms]   0x65cbe00000 size 0x000014000 type 0x03 attr 0x0 perm 0x5 ipc 0 dev 0
+[ 1058153 ms]   0x65cbe14000 size 0x000003000 type 0x03 attr 0x0 perm 0x1 ipc 0 dev 0
+[ 1058154 ms]   0x65cbe17000 size 0x000001000 type 0x04 attr 0x10 perm 0x1 ipc 0 dev 0
+[ 1058156 ms]   0x65cbe18000 size 0x000110000 type 0x04 attr 0x0 perm 0x3 ipc 0 dev 0
+[ 1058157 ms]   0x66cfa83000 size 0x000040000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[ 1058159 ms]   0x8000000000 size 0xffffff8000000000 type 0x10 attr 0x0 perm 0x0 ipc 0 dev 0
+[ 1058161 ms] memory map end: 16 regions listed, 0 skipped, plain heap 0x2365d0000, used 0x23bd38000
+[ 1058162 ms] memory map verdict (before releasing the exit lock): 3 region(s) that can lock memory for the next program
+[ 1058163 ms] exit: exit_lock_guard done
+[ 1058165 ms] exit cleanup: start, 0 tracked thread(s) running
+[ 1058166 ms] exit cleanup: 0 thread(s) paused, 0 unjoined stack(s) released (0 KiB), 0 failed
+[ 1058167 ms] memory map (after exit cleanup):
+[ 1058168 ms]   0x0008000000 size 0x001864000 type 0x08 attr 0x0 perm 0x5 ipc 0 dev 0 (image)
+[ 1058169 ms]   0x0009864000 size 0x000920000 type 0x08 attr 0x0 perm 0x1 ipc 0 dev 0 (image)
+[ 1058171 ms]   0x000a184000 size 0x000122000 type 0x09 attr 0x10 perm 0x1 ipc 0 dev 0 (image)
+[ 1058172 ms]   0x000a2a6000 size 0x00001e000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[ 1058173 ms]   0x000a2c4000 size 0x000b6c000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[ 1058175 ms]   0x145de13000 size 0x000001000 type 0x0c attr 0x0 perm 0x3 ipc 0 dev 0
+[ 1058177 ms]   0x2b62060000 size 0x000001000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[ 1058178 ms]   0x5db0bcb000 size 0x000010000 type 0x0b attr 0x0 perm 0x3 ipc 0 dev 0
+[ 1058179 ms]   0x5fac800000 size 0x0022c4000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[ 1058180 ms]   0x5faeac4000 size 0x000b6c000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[ 1058182 ms]   0x65cbe00000 size 0x000014000 type 0x03 attr 0x0 perm 0x5 ipc 0 dev 0
+[ 1058183 ms]   0x65cbe14000 size 0x000003000 type 0x03 attr 0x0 perm 0x1 ipc 0 dev 0
+[ 1058184 ms]   0x65cbe17000 size 0x000001000 type 0x04 attr 0x10 perm 0x1 ipc 0 dev 0
+[ 1058185 ms]   0x65cbe18000 size 0x000110000 type 0x04 attr 0x0 perm 0x3 ipc 0 dev 0
+[ 1058187 ms]   0x66cfa83000 size 0x000040000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[ 1058188 ms]   0x8000000000 size 0xffffff8000000000 type 0x10 attr 0x0 perm 0x0 ipc 0 dev 0
+[ 1058189 ms] memory map end: 16 regions listed, 0 skipped, plain heap 0x2365d0000, used 0x23bd38000
+[ 1058190 ms] memory map verdict (after exit cleanup): 3 region(s) that can lock memory for the next program
+[ 1058192 ms] exit cleanup: releasing the exit lock
+
+========== new run ==========
+[ 4102720 ms] Dolphin diagnostics build started
+[ 4102722 ms] image base 0x8000000 end 0x12e2f710 (size 0xae2f710)
+[ 4102724 ms] applet type 0
+[ 4102725 ms] process memory total 0x23c000000 (9152 MiB)
+[ 4102726 ms] process memory used 0x23bd38000 (9149 MiB)
+[ 4102728 ms] core mask 0x3f
+[ 4102729 ms] alias region size 0x2000000000
+[ 4102730 ms] heap region size 0x300000000
+[ 4102732 ms] aslr region size 0x7ff8000000
+[ 4102733 ms] kaiHEN ldr:ro session: present (0x0)
+[ 4102735 ms] main: entered (argc 1)
+[ 4102737 ms] main: argv[0] = sdmc:/switch/dolphin.nro
+[ 4102738 ms] main: reserving fastmem arena
+[ 4102739 ms] fastmem: arena window 0x284000000 (size 0x200000000)
+[ 4102741 ms] main: fastmem arena reserved
+[ 4102742 ms] main: starting SaltyNX
+[ 4102743 ms] main: SaltyNX started
+[ 4102747 ms] main: romfsInit 0x0
+[ 4102751 ms] main: applet mode 0
+[ 4102753 ms] main: UICommon::Init
+[ 4102862 ms] Dolphin console logging enabled (effective level 4)
+[ 4102864 ms] main: PopulateBackendInfo (window 0xae28c68)
+[ 4102866 ms] vulkan: negotiating ICD interface
+[ 4102867 ms] vulkan: ICD negotiation 0 (version 7)
+[ 4102868 ms] vulkan: global dispatch GIPA=1 CreateInstance=1 Extensions=1 Layers=0 Version=1
+[ 4102902 ms] main: PopulateBackendInfo done
+[ 4102905 ms] main: RunLauncher
+[ 4110066 ms] main: RunLauncher returned (request 0)
+[ 4110069 ms] main: returning
+[ 4110070 ms] exit: overlay_renderer_guard
+[ 4110071 ms] exit: overlay_renderer_guard done
+[ 4110073 ms] exit: applet_hook_guard
+[ 4110074 ms] exit: applet_hook_guard done
+[ 4110075 ms] exit: achievement_guard
+[ 4110077 ms] exit: achievement_guard done
+[ 4110078 ms] exit: ui_common_guard
+[ 4110079 ms] exit: ui_common_guard done
+[ 4110081 ms] exit: platform_guard
+[ 4110082 ms] exit: platform_guard done
+[ 4110084 ms] exit: audio_guard
+[ 4110162 ms] exit: audio_guard done
+[ 4110164 ms] exit: saltynx_guard
+[ 4110166 ms] exit: saltynx_guard done
+[ 4110167 ms] exit: exit_lock_guard
+[ 4110169 ms] memory map (before releasing the exit lock):
+[ 4110170 ms]   0x0008000000 size 0x001864000 type 0x08 attr 0x0 perm 0x5 ipc 0 dev 0 (image)
+[ 4110171 ms]   0x0009864000 size 0x000920000 type 0x08 attr 0x0 perm 0x1 ipc 0 dev 0 (image)
+[ 4110172 ms]   0x000a184000 size 0x000122000 type 0x09 attr 0x10 perm 0x1 ipc 0 dev 0 (image)
+[ 4110173 ms]   0x000a2a6000 size 0x00001e000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[ 4110175 ms]   0x000a2c4000 size 0x000b6c000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[ 4110176 ms]   0x1ffd000000 size 0x0022c4000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[ 4110177 ms]   0x1fff2c4000 size 0x000b6c000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[ 4110178 ms]   0x2382998000 size 0x000010000 type 0x0b attr 0x0 perm 0x3 ipc 0 dev 0
+[ 4110180 ms]   0x4c29c00000 size 0x000014000 type 0x03 attr 0x0 perm 0x5 ipc 0 dev 0
+[ 4110181 ms]   0x4c29c14000 size 0x000003000 type 0x03 attr 0x0 perm 0x1 ipc 0 dev 0
+[ 4110182 ms]   0x4c29c17000 size 0x000001000 type 0x04 attr 0x10 perm 0x1 ipc 0 dev 0
+[ 4110184 ms]   0x4c29c18000 size 0x000110000 type 0x04 attr 0x0 perm 0x3 ipc 0 dev 0
+[ 4110185 ms]   0x4ed5fb8000 size 0x000001000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[ 4110186 ms]   0x5bce587000 size 0x000040000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[ 4110188 ms]   0x5e5b99e000 size 0x000001000 type 0x0c attr 0x0 perm 0x3 ipc 0 dev 0
+[ 4110189 ms]   0x8000000000 size 0xffffff8000000000 type 0x10 attr 0x0 perm 0x0 ipc 0 dev 0
+[ 4110190 ms] memory map end: 16 regions listed, 0 skipped, plain heap 0x2365d0000, used 0x23bd38000
+[ 4110191 ms] memory map verdict (before releasing the exit lock): 3 region(s) that can lock memory for the next program
+[ 4110193 ms] exit: exit_lock_guard done
+[ 4110194 ms] exit cleanup: start, 0 tracked thread(s) running
+[ 4110195 ms] exit cleanup: 0 thread(s) paused, 0 unjoined stack(s) released (0 KiB), 0 failed
+[ 4110196 ms] memory map (after exit cleanup):
+[ 4110198 ms]   0x0008000000 size 0x001864000 type 0x08 attr 0x0 perm 0x5 ipc 0 dev 0 (image)
+[ 4110199 ms]   0x0009864000 size 0x000920000 type 0x08 attr 0x0 perm 0x1 ipc 0 dev 0 (image)
+[ 4110200 ms]   0x000a184000 size 0x000122000 type 0x09 attr 0x10 perm 0x1 ipc 0 dev 0 (image)
+[ 4110202 ms]   0x000a2a6000 size 0x00001e000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[ 4110203 ms]   0x000a2c4000 size 0x000b6c000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[ 4110204 ms]   0x1ffd000000 size 0x0022c4000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[ 4110206 ms]   0x1fff2c4000 size 0x000b6c000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[ 4110207 ms]   0x2382998000 size 0x000010000 type 0x0b attr 0x0 perm 0x3 ipc 0 dev 0
+[ 4110208 ms]   0x4c29c00000 size 0x000014000 type 0x03 attr 0x0 perm 0x5 ipc 0 dev 0
+[ 4110209 ms]   0x4c29c14000 size 0x000003000 type 0x03 attr 0x0 perm 0x1 ipc 0 dev 0
+[ 4110211 ms]   0x4c29c17000 size 0x000001000 type 0x04 attr 0x10 perm 0x1 ipc 0 dev 0
+[ 4110212 ms]   0x4c29c18000 size 0x000110000 type 0x04 attr 0x0 perm 0x3 ipc 0 dev 0
+[ 4110213 ms]   0x4ed5fb8000 size 0x000001000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[ 4110215 ms]   0x5bce587000 size 0x000040000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[ 4110216 ms]   0x5e5b99e000 size 0x000001000 type 0x0c attr 0x0 perm 0x3 ipc 0 dev 0
+[ 4110218 ms]   0x8000000000 size 0xffffff8000000000 type 0x10 attr 0x0 perm 0x0 ipc 0 dev 0
+[ 4110219 ms] memory map end: 16 regions listed, 0 skipped, plain heap 0x2365d0000, used 0x23bd38000
+[ 4110220 ms] memory map verdict (after exit cleanup): 3 region(s) that can lock memory for the next program
+[ 4110221 ms] exit cleanup: releasing the exit lock
+[ 4110223 ms] exit cleanup: exit lock released: 0x0
+[ 4110224 ms] exit report done
+[ 4110225 ms] process exiting (atexit)
+[ 4110227 ms] userAppExit: libnx teardown starting
+
+========== new run ==========
+[  619855 ms] Dolphin diagnostics build started
+[  619857 ms] image base 0x8000000 end 0x12e32a10 (size 0xae32a10)
+[  619859 ms] applet type 0
+[  619860 ms] process memory total 0x23c000000 (9152 MiB)
+[  619862 ms] process memory used 0x23bd38000 (9149 MiB)
+[  619863 ms] core mask 0x3f
+[  619864 ms] alias region size 0x2000000000
+[  619865 ms] heap region size 0x300000000
+[  619867 ms] aslr region size 0x7ff8000000
+[  619868 ms] kaiHEN ldr:ro session: present (0x0)
+[  619869 ms] sm: looking up 'set' (thread handle 0x81ff)
+[  619871 ms] sm: 'set' -> 0x0 (0 ms)
+[  619873 ms] main: entered (argc 1)
+[  619874 ms] main: argv[0] = sdmc:/switch/dolphin.nro
+[  619876 ms] main: reserving fastmem arena
+[  619877 ms] fastmem: arena window 0x7659a00000 (size 0x200000000)
+[  619878 ms] main: fastmem arena reserved
+[  619879 ms] main: starting SaltyNX
+[  619880 ms] main: SaltyNX started
+[  619885 ms] main: romfsInit 0x0
+[  619890 ms] main: applet mode 0
+[  619891 ms] sm: looking up 'bsd:u' (thread handle 0x81ff)
+[  619892 ms] sm: 'bsd:u' -> 0x0 (0 ms)
+[  619894 ms] sm: looking up 'bsd:u' (thread handle 0x81ff)
+[  619895 ms] sm: 'bsd:u' -> 0x0 (0 ms)
+[  619896 ms] main: UICommon::Init
+[  620008 ms] Dolphin console logging enabled (effective level 4)
+[  620011 ms] main: PopulateBackendInfo (window 0xae2bfa8)
+[  620012 ms] vulkan: negotiating ICD interface
+[  620013 ms] vulkan: ICD negotiation 0 (version 7)
+[  620015 ms] vulkan: global dispatch GIPA=1 CreateInstance=1 Extensions=1 Layers=0 Version=1
+[  620046 ms] thread: created 0x0, stack 0x7035426000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620055 ms] main: PopulateBackendInfo done
+[  620058 ms] thread: created 0x0, stack 0x70243b5000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620059 ms] thread: created 0x0, stack 0x7003b11000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620060 ms] main: RunLauncher
+[  620065 ms] sm: looking up 'psm' (thread handle 0x81ff)
+[  620067 ms] sm: 'psm' -> 0x0 (0 ms)
+[  620068 ms] sm: looking up 'aud:u' (thread handle 0x81ff)
+[  620070 ms] sm: 'aud:u' -> 0x0 (0 ms)
+[  620078 ms] thread: created 0x0, stack 0x7050bd2000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620103 ms] thread: created 0x0, stack 0x700402f000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620104 ms] thread: created 0x0, stack 0x7052779000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620112 ms] thread: created 0x0, stack 0x7004ed5000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620114 ms] thread: created 0x0, stack 0x700bcae000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620115 ms] thread: created 0x0, stack 0x6ff4b5c000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620120 ms] thread: created 0x0, stack 0x701d327000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620136 ms] sm: looking up 'pl:u' (thread handle 0x81ff)
+[  620138 ms] sm: 'pl:u' -> 0x0 (0 ms)
+[  620143 ms] thread: created 0x0, stack 0x704a652000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620155 ms] thread: created 0x0, stack 0x700d3a5000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620163 ms] thread: created 0x0, stack 0x702d2cd000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620164 ms] thread: created 0x0, stack 0x70129e3000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620166 ms] thread: created 0x0, stack 0x703e6a2000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620177 ms] sm: looking up 'ssl' (thread handle 0x81ff)
+[  620179 ms] sm: 'ssl' -> 0x0 (0 ms)
+[  620182 ms] sm: looking up 'csrng' (thread handle 0x81ff)
+[  620185 ms] sm: 'csrng' -> 0x0 (0 ms)
+[  620187 ms] thread: created 0x0, stack 0x7054230000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620194 ms] thread: created 0x0, stack 0x7025384000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620199 ms] sm: looking up 'spl:' (thread handle 0x4981ba)
+[  620206 ms] thread: created 0x0, stack 0x6fecc4b000 size 0x20000, entry dolphin.elf+0x1768e20, creator dolphin.elf+0x1768f38
+[  620215 ms] sm: 'spl:' -> 0x0 (0 ms)
+[  620229 ms] sm: looking up 'nifm:u' (thread handle 0x4a01b9)
+[  620234 ms] sm: looking up 'spl:' (thread handle 0x4981ba)
+[  620240 ms] sm: 'nifm:u' -> 0x0 (0 ms)
+[  620243 ms] sm: 'spl:' -> 0x0 (0 ms)
+[  620244 ms] sm: looking up 'sfdnsres' (thread handle 0x4a01b9)
+[  620247 ms] sm: looking up 'usb:hs' (thread handle 0x4981ba)
+[  620248 ms] sm: 'sfdnsres' -> 0x0 (0 ms)
+[  620251 ms] sm: 'usb:hs' -> 0x0 (0 ms)
+[  624472 ms] main: RunLauncher returned (request 0)
+[  624474 ms] main: returning
+[  624476 ms] exit: overlay_renderer_guard
+[  624477 ms] exit: overlay_renderer_guard done
+[  624478 ms] exit: applet_hook_guard
+[  624479 ms] exit: applet_hook_guard done
+[  624480 ms] exit: achievement_guard
+[  624482 ms] exit: achievement_guard done
+[  624483 ms] exit: ui_common_guard
+[  624484 ms] exit: ui_common_guard done
+[  624486 ms] exit: platform_guard
+[  624487 ms] exit: platform_guard done
+[  624489 ms] exit: audio_guard
+[  624564 ms] exit: audio_guard done
+[  624566 ms] exit: saltynx_guard
+[  624567 ms] exit: saltynx_guard done
+[  624569 ms] exit: exit_lock_guard
+[  624570 ms] memory map (before releasing the exit lock):
+[  624571 ms]   0x0008000000 size 0x001865000 type 0x08 attr 0x0 perm 0x5 ipc 0 dev 0 (image)
+[  624573 ms]   0x0009865000 size 0x000921000 type 0x08 attr 0x0 perm 0x1 ipc 0 dev 0 (image)
+[  624574 ms]   0x000a186000 size 0x000122000 type 0x09 attr 0x10 perm 0x1 ipc 0 dev 0 (image)
+[  624576 ms]   0x000a2a8000 size 0x00001e000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[  624577 ms]   0x000a2c6000 size 0x000b6d000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[  624578 ms]   0x0fc5ca9000 size 0x000040000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[  624580 ms]   0x11f2600000 size 0x000014000 type 0x03 attr 0x0 perm 0x5 ipc 0 dev 0
+[  624581 ms]   0x11f2614000 size 0x000003000 type 0x03 attr 0x0 perm 0x1 ipc 0 dev 0
+[  624582 ms]   0x11f2617000 size 0x000001000 type 0x04 attr 0x10 perm 0x1 ipc 0 dev 0
+[  624584 ms]   0x11f2618000 size 0x000110000 type 0x04 attr 0x0 perm 0x3 ipc 0 dev 0
+[  624585 ms]   0x47efcfc000 size 0x000001000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[  624587 ms]   0x4b0809e000 size 0x000001000 type 0x0c attr 0x0 perm 0x3 ipc 0 dev 0
+[  624588 ms]   0x62ce400000 size 0x0022c6000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[  624589 ms]   0x62d06c6000 size 0x000b6d000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[  624591 ms]   0x7066aca000 size 0x000010000 type 0x0b attr 0x0 perm 0x3 ipc 0 dev 0
+[  624592 ms]   0x8000000000 size 0xffffff8000000000 type 0x10 attr 0x0 perm 0x0 ipc 0 dev 0
+[  624593 ms] memory map end: 16 regions listed, 0 skipped, plain heap 0x2365cd000, used 0x23bd38000
+[  624594 ms] memory map verdict (before releasing the exit lock): 3 region(s) that can lock memory for the next program
+[  624596 ms] exit: exit_lock_guard done
+[  624597 ms] exit cleanup: start, 0 tracked thread(s) running
+[  624598 ms] exit cleanup: 0 thread(s) paused, 0 unjoined stack(s) released (0 KiB), 0 failed
+[  624599 ms] sm: 0 lookup(s) still waiting at exit
+[  624601 ms] memory map (after exit cleanup):
+[  624602 ms]   0x0008000000 size 0x001865000 type 0x08 attr 0x0 perm 0x5 ipc 0 dev 0 (image)
+[  624604 ms]   0x0009865000 size 0x000921000 type 0x08 attr 0x0 perm 0x1 ipc 0 dev 0 (image)
+[  624605 ms]   0x000a186000 size 0x000122000 type 0x09 attr 0x10 perm 0x1 ipc 0 dev 0 (image)
+[  624607 ms]   0x000a2a8000 size 0x00001e000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[  624608 ms]   0x000a2c6000 size 0x000b6d000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[  624609 ms]   0x0fc5ca9000 size 0x000040000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[  624610 ms]   0x11f2600000 size 0x000014000 type 0x03 attr 0x0 perm 0x5 ipc 0 dev 0
+[  624612 ms]   0x11f2614000 size 0x000003000 type 0x03 attr 0x0 perm 0x1 ipc 0 dev 0
+[  624613 ms]   0x11f2617000 size 0x000001000 type 0x04 attr 0x10 perm 0x1 ipc 0 dev 0
+[  624614 ms]   0x11f2618000 size 0x000110000 type 0x04 attr 0x0 perm 0x3 ipc 0 dev 0
+[  624615 ms]   0x47efcfc000 size 0x000001000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[  624617 ms]   0x4b0809e000 size 0x000001000 type 0x0c attr 0x0 perm 0x3 ipc 0 dev 0
+[  624618 ms]   0x62ce400000 size 0x0022c6000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[  624619 ms]   0x62d06c6000 size 0x000b6d000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[  624621 ms]   0x7066aca000 size 0x000010000 type 0x0b attr 0x0 perm 0x3 ipc 0 dev 0
+[  624622 ms]   0x8000000000 size 0xffffff8000000000 type 0x10 attr 0x0 perm 0x0 ipc 0 dev 0
+[  624624 ms] memory map end: 16 regions listed, 0 skipped, plain heap 0x2365cd000, used 0x23bd38000
+[  624625 ms] memory map verdict (after exit cleanup): 3 region(s) that can lock memory for the next program
+[  624626 ms] exit cleanup: releasing the exit lock
+[  624627 ms] exit cleanup: exit lock released: 0x0
+[  624628 ms] exit report done
+[  624630 ms] process exiting (atexit)
+[  624632 ms] userAppExit: libnx teardown starting
+
+========== new run ==========
+[  927011 ms] Dolphin diagnostics build started
+[  927013 ms] image base 0x8000000 end 0x12e31a10 (size 0xae31a10)
+[  927015 ms] applet type 0
+[  927016 ms] process memory total 0x23c000000 (9152 MiB)
+[  927017 ms] process memory used 0x23bd38000 (9149 MiB)
+[  927019 ms] core mask 0x3f
+[  927020 ms] alias region size 0x2000000000
+[  927021 ms] heap region size 0x300000000
+[  927022 ms] aslr region size 0x7ff8000000
+[  927024 ms] kaiHEN ldr:ro session: present (0x0)
+[  927025 ms] sm: looking up 'set' (thread handle 0x81ff)
+[  927027 ms] sm: 'set' -> 0x0 (0 ms)
+[  927029 ms] main: entered (argc 1)
+[  927030 ms] main: argv[0] = sdmc:/switch/dolphin.nro
+[  927032 ms] main: reserving fastmem arena
+[  927033 ms] fastmem: arena window 0x3c7fc00000 (size 0x200000000)
+[  927034 ms] main: fastmem arena reserved
+[  927036 ms] main: starting SaltyNX
+[  927037 ms] main: SaltyNX started
+[  927041 ms] main: romfsInit 0x0
+[  927045 ms] main: applet mode 0
+[  927047 ms] test switch: no-network is set, leaving it off
+[  927048 ms] main: UICommon::Init
+[  927157 ms] Dolphin console logging enabled (effective level 4)
+[  927160 ms] main: PopulateBackendInfo (window 0xae2afa8)
+[  927161 ms] vulkan: negotiating ICD interface
+[  927163 ms] vulkan: ICD negotiation 0 (version 7)
+[  927164 ms] vulkan: global dispatch GIPA=1 CreateInstance=1 Extensions=1 Layers=0 Version=1
+[  927196 ms] thread: created 0x0, stack 0x393b822000 size 0x20000, entry dolphin.elf+0x1768c20, creator dolphin.elf+0x1768d38
+[  927205 ms] main: PopulateBackendInfo done
+[  927207 ms] thread: created 0x0, stack 0x39243ad000 size 0x20000, entry dolphin.elf+0x1768c20, creator dolphin.elf+0x1768d38
+[  927209 ms] thread: created 0x0, stack 0x3919033000 size 0x20000, entry dolphin.elf+0x1768c20, creator dolphin.elf+0x1768d38
+[  927210 ms] main: RunLauncher
+[  927215 ms] sm: looking up 'psm' (thread handle 0x81ff)
+[  927216 ms] sm: 'psm' -> 0x0 (0 ms)
+[  927219 ms] test switch: no-audio is set, leaving it off
+[  927244 ms] thread: created 0x0, stack 0x39583bd000 size 0x20000, entry dolphin.elf+0x1768c20, creator dolphin.elf+0x1768d38
+[  927245 ms] thread: created 0x0, stack 0x398acbf000 size 0x20000, entry dolphin.elf+0x1768c20, creator dolphin.elf+0x1768d38
+[  927253 ms] thread: created 0x0, stack 0x3930118000 size 0x20000, entry dolphin.elf+0x1768c20, creator dolphin.elf+0x1768d38
+[  927255 ms] thread: created 0x0, stack 0x39713df000 size 0x20000, entry dolphin.elf+0x1768c20, creator dolphin.elf+0x1768d38
+[  927256 ms] thread: created 0x0, stack 0x396faa5000 size 0x20000, entry dolphin.elf+0x1768c20, creator dolphin.elf+0x1768d38
+[  927261 ms] thread: created 0x0, stack 0x395f1a6000 size 0x20000, entry dolphin.elf+0x1768c20, creator dolphin.elf+0x1768d38
+[  927277 ms] sm: looking up 'pl:u' (thread handle 0x81ff)
+[  927279 ms] sm: 'pl:u' -> 0x0 (0 ms)
+[  927284 ms] thread: created 0x0, stack 0x392a05a000 size 0x20000, entry dolphin.elf+0x1768c20, creator dolphin.elf+0x1768d38
+[  927295 ms] thread: created 0x0, stack 0x394f895000 size 0x20000, entry dolphin.elf+0x1768c20, creator dolphin.elf+0x1768d38
+[  927304 ms] thread: created 0x0, stack 0x3975fd3000 size 0x20000, entry dolphin.elf+0x1768c20, creator dolphin.elf+0x1768d38
+[  927305 ms] thread: created 0x0, stack 0x39226af000 size 0x20000, entry dolphin.elf+0x1768c20, creator dolphin.elf+0x1768d38
+[  927307 ms] thread: created 0x0, stack 0x3983f35000 size 0x20000, entry dolphin.elf+0x1768c20, creator dolphin.elf+0x1768d38
+[  927320 ms] test switch: no-network is set, leaving it off
+[  927321 ms] thread: created 0x0, stack 0x391aa0b000 size 0x20000, entry dolphin.elf+0x1768c20, creator dolphin.elf+0x1768d38
+[  927330 ms] test switch: no-usb is set, leaving it off
+[  932221 ms] applet: exit requested by the system
+[  932465 ms] main: RunLauncher returned (request 0)
+[  932467 ms] main: returning
+[  932469 ms] exit: overlay_renderer_guard
+[  932470 ms] exit: overlay_renderer_guard done
+[  932471 ms] exit: applet_hook_guard
+[  932472 ms] exit: applet_hook_guard done
+[  932474 ms] exit: achievement_guard
+[  932475 ms] exit: achievement_guard done
+[  932477 ms] exit: ui_common_guard
+[  932478 ms] exit: ui_common_guard done
+[  932480 ms] exit: platform_guard
+[  932481 ms] exit: platform_guard done
+[  932482 ms] exit: audio_guard
+[  932483 ms] exit: audio_guard done
+[  932484 ms] exit: saltynx_guard
+[  932486 ms] exit: saltynx_guard done
+[  932487 ms] exit: exit_lock_guard
+[  932488 ms] memory map (before releasing the exit lock):
+[  932489 ms]   0x0008000000 size 0x001864000 type 0x08 attr 0x0 perm 0x5 ipc 0 dev 0 (image)
+[  932491 ms]   0x0009864000 size 0x000921000 type 0x08 attr 0x0 perm 0x1 ipc 0 dev 0 (image)
+[  932492 ms]   0x000a185000 size 0x000122000 type 0x09 attr 0x10 perm 0x1 ipc 0 dev 0 (image)
+[  932494 ms]   0x000a2a7000 size 0x00001e000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[  932495 ms]   0x000a2c5000 size 0x000b6d000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[  932497 ms]   0x0e3ea00000 size 0x000014000 type 0x03 attr 0x0 perm 0x5 ipc 0 dev 0
+[  932498 ms]   0x0e3ea14000 size 0x000003000 type 0x03 attr 0x0 perm 0x1 ipc 0 dev 0
+[  932500 ms]   0x0e3ea17000 size 0x000001000 type 0x04 attr 0x10 perm 0x1 ipc 0 dev 0
+[  932501 ms]   0x0e3ea18000 size 0x000110000 type 0x04 attr 0x0 perm 0x3 ipc 0 dev 0
+[  932502 ms]   0x2002f8e000 size 0x000001000 type 0x0c attr 0x0 perm 0x3 ipc 0 dev 0
+[  932504 ms]   0x20724fd000 size 0x000040000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[  932505 ms]   0x2376a00000 size 0x0022c5000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[  932506 ms]   0x2378cc5000 size 0x000b6d000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[  932507 ms]   0x3962a5e000 size 0x000010000 type 0x0b attr 0x0 perm 0x3 ipc 0 dev 0
+[  932509 ms]   0x43758b8000 size 0x000001000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[  932511 ms]   0x8000000000 size 0xffffff8000000000 type 0x10 attr 0x0 perm 0x0 ipc 0 dev 0
+[  932512 ms] memory map end: 16 regions listed, 0 skipped, plain heap 0x2365ce000, used 0x23bd38000
+[  932513 ms] memory map verdict (before releasing the exit lock): 3 region(s) that can lock memory for the next program
+[  932514 ms] exit: exit_lock_guard done
+[  932516 ms] exit cleanup: start, 0 tracked thread(s) running
+[  932517 ms] exit cleanup: 0 thread(s) paused, 0 unjoined stack(s) released (0 KiB), 0 failed
+[  932518 ms] sm: 0 lookup(s) still waiting at exit
+[  932519 ms] memory map (after exit cleanup):
+[  932521 ms]   0x0008000000 size 0x001864000 type 0x08 attr 0x0 perm 0x5 ipc 0 dev 0 (image)
+[  932522 ms]   0x0009864000 size 0x000921000 type 0x08 attr 0x0 perm 0x1 ipc 0 dev 0 (image)
+[  932523 ms]   0x000a185000 size 0x000122000 type 0x09 attr 0x10 perm 0x1 ipc 0 dev 0 (image)
+[  932525 ms]   0x000a2a7000 size 0x00001e000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[  932526 ms]   0x000a2c5000 size 0x000b6d000 type 0x09 attr 0x0 perm 0x3 ipc 0 dev 0 (image)
+[  932528 ms]   0x0e3ea00000 size 0x000014000 type 0x03 attr 0x0 perm 0x5 ipc 0 dev 0
+[  932529 ms]   0x0e3ea14000 size 0x000003000 type 0x03 attr 0x0 perm 0x1 ipc 0 dev 0
+[  932530 ms]   0x0e3ea17000 size 0x000001000 type 0x04 attr 0x10 perm 0x1 ipc 0 dev 0
+[  932532 ms]   0x0e3ea18000 size 0x000110000 type 0x04 attr 0x0 perm 0x3 ipc 0 dev 0
+[  932533 ms]   0x2002f8e000 size 0x000001000 type 0x0c attr 0x0 perm 0x3 ipc 0 dev 0
+[  932535 ms]   0x20724fd000 size 0x000040000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[  932536 ms]   0x2376a00000 size 0x0022c5000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[  932537 ms]   0x2378cc5000 size 0x000b6d000 type 0x05 attr 0x1 perm 0x0 ipc 0 dev 0
+[  932538 ms]   0x3962a5e000 size 0x000010000 type 0x0b attr 0x0 perm 0x3 ipc 0 dev 0
+[  932539 ms]   0x43758b8000 size 0x000001000 type 0x06 attr 0x0 perm 0x1 ipc 0 dev 0
+[  932541 ms]   0x8000000000 size 0xffffff8000000000 type 0x10 attr 0x0 perm 0x0 ipc 0 dev 0
+[  932542 ms] memory map end: 16 regions listed, 0 skipped, plain heap 0x2365ce000, used 0x23bd38000
+[  932544 ms] memory map verdict (after exit cleanup): 3 region(s) that can lock memory for the next program
+[  932545 ms] exit cleanup: releasing the exit lock

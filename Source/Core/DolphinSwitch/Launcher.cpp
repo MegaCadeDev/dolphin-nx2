@@ -53,6 +53,7 @@
 #include "Common/IniFile.h"
 #include "Common/Logging/Log.h"
 #include "Common/ScopeGuard.h"
+#include "Common/SwitchDiagnostics.h"
 #include "Core/AchievementManager.h"
 #include "Core/CommonTitles.h"
 #include "Core/Config/AchievementSettings.h"
@@ -2583,7 +2584,7 @@ bool Launcher::Initialize(bool applet_installer)
         m_localization.Translate("The first page will appear as soon as it is ready."), m_dim);
     SDL_RenderPresent(m_renderer);
     LoadSourcesAndShares();
-    m_cover_download_ready = CoverDownload::Initialize();
+    m_cover_download_ready = !SWITCH_DIAG_DISABLED("no-network") && CoverDownload::Initialize();
   }
   if (!applet_installer)
     Storage::SetUsbStatusCallback(UsbStatusWake);

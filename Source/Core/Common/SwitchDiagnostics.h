@@ -18,6 +18,10 @@ namespace Common::SwitchDiagnostics
 // Appends a printf-style line to boot.log and syncs it to the SD card.
 void Mark(const char* format, ...) __attribute__((format(printf, 1, 2)));
 
+// The offset of a code address in dolphin.elf, as tools/symbolize.sh reads it
+// ("dolphin.elf+0x..."), or 0 when the address is outside Dolphin's image.
+u64 ElfOffset(const void* address);
+
 // Turns on Dolphin's console log listener for the startup-relevant log types.
 void EnableDolphinLogging();
 
@@ -42,14 +46,20 @@ void FinishExitReport();
 // reported unsupported, to isolate its mappings from other exit problems.
 bool IsFastmemDisabledByFile();
 
+// True when sdmc:/switch/dolphin/diag/<name> exists (and marks it): a test
+// switch that leaves one subsystem off, to find what breaks the next program.
+bool IsDisabledByFile(const char* name);
+
 // Writes crash.log. Safe to call from the libnx exception handler: no allocation.
 void WriteCrashReport(const ThreadExceptionDump* context);
 }  // namespace Common::SwitchDiagnostics
 
 #define SWITCH_DIAG_MARK(...) ::Common::SwitchDiagnostics::Mark(__VA_ARGS__)
+#define SWITCH_DIAG_DISABLED(name) ::Common::SwitchDiagnostics::IsDisabledByFile(name)
 
 #else
 
 #define SWITCH_DIAG_MARK(...) ((void)0)
+#define SWITCH_DIAG_DISABLED(name) false
 
 #endif
