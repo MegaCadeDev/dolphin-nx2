@@ -744,7 +744,12 @@ void Wiimote::LoadDefaults(const ControllerInterface& ciface)
   m_imu_gyroscope->SetControlExpression(3, "`Gyro Roll Right`");
   m_imu_gyroscope->SetControlExpression(4, "`Gyro Yaw Left`");
   m_imu_gyroscope->SetControlExpression(5, "`Gyro Yaw Right`");
+#ifdef __SWITCH2__
+  // R3 also shakes the remote; Y is free in this mapping.
+  m_imu_ir->SetControlExpression(0, "`Y`");
+#else
   m_imu_ir->SetControlExpression(0, "`R3`");
+#endif
   m_imu_ir->SetTotalYawDegrees(70);
   m_imu_ir->SetAccelWeightPercent(1);
 #else

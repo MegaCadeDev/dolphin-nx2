@@ -34,6 +34,7 @@ enum class ActionType
   ToggleFrameGeneration,
   ToggleFPS,
   ToggleVBISkip,
+  ToggleWriteBackCache,
   SetControllerMode,
   ResetGBA,
   ToggleSkylandersPortal,
@@ -82,6 +83,7 @@ void ToggleCheatForSession(int flat_index);
 void ToggleFrameGenerationForSession();
 void ToggleFPSForSession();
 void ToggleVBISkipForSession();
+void ToggleWriteBackCacheForGame();
 void SetControllerModeResult(int player, ControllerMode mode, bool success);
 
 void Draw();

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <algorithm>
+#include <cctype>
 #include <array>
 #include <atomic>
 #include <charconv>
@@ -56,6 +57,7 @@
 #include "Core/State.h"
 #include "Core/System.h"
 #include "DiscIO/GameModDescriptor.h"
+#include "DiscIO/Volume.h"
 #include "DiscIO/RiivolutionParser.h"
 #include "DiscIO/RiivolutionPatcher.h"
 #include "DolphinSwitch/Audio.h"
@@ -444,6 +446,76 @@ struct SessionResult
 };
 
 using RuntimeControllerMode = DolphinSwitch::RuntimeOverlay::ControllerMode;
+
+// What the in-game menu changed and the next start of the game should keep: the
+// controller mode of each player and the disc last put in the drive. Kept apart
+// from GameSettings so Dolphin's per-game config and the launcher's per-game
+// badges don't see it.
+std::string SessionStatePath(const std::string& game_id)
+{
+  const bool valid = !game_id.empty() && std::ranges::all_of(game_id, [](unsigned char c) {
+    return std::isalnum(c) != 0;
+  });
+  return valid ? File::GetUserPath(D_USER_IDX) + "SessionState/" + game_id + ".ini" :
+                 std::string{};
+}
+
+std::optional<std::string> ReadSessionState(const std::string& game_id, const std::string& key)
+{
+  const std::string path = SessionStatePath(game_id);
+  Common::IniFile ini;
+  std::string value;
+  if (path.empty() || !ini.Load(path) || !ini.GetIfExists("Session", key, &value) ||
+      value.empty())
+  {
+    return std::nullopt;
+  }
+  return value;
+}
+
+void WriteSessionState(const std::string& game_id, const std::string& key,
+                       const std::string& value)
+{
+  const std::string path = SessionStatePath(game_id);
+  if (path.empty() || !File::CreateFullPath(path))
+    return;
+  Common::IniFile ini;
+  ini.Load(path);
+  ini.GetOrCreateSection("Session")->Set(key, value);
+  if (!ini.Save(path))
+    ERROR_LOG_FMT(CORE, "Could not save {}", path);
+}
+
+std::string ControllerModeKey(int player)
+{
+  return "ControllerMode" + std::to_string(player + 1);
+}
+
+// The disc last put in for this game, when the same launcher entry is started
+// again (another entry, such as disc 2 of the game, is the player's choice) and
+// the disc is still there and belongs to the same game.
+std::optional<std::string> LastDiscForGame(const std::string& game_id,
+                                           const std::string& launched_path)
+{
+  const std::optional<std::string> previous_launch = ReadSessionState(game_id, "Launched");
+  WriteSessionState(game_id, "Launched", launched_path);
+  const std::optional<std::string> saved = ReadSessionState(game_id, "Disc");
+  if (!saved || !previous_launch || *previous_launch != launched_path)
+  {
+    if (saved)
+      WriteSessionState(game_id, "Disc", launched_path);
+    return std::nullopt;
+  }
+  if (*saved == launched_path)
+    return std::nullopt;
+  std::string resolved;
+  if (!DolphinSwitch::PrepareLaunchStorage(*saved, &resolved) || !File::Exists(resolved))
+    return std::nullopt;
+  const std::unique_ptr<DiscIO::VolumeDisc> disc = DiscIO::CreateDisc(resolved);
+  if (!disc || disc->GetGameID() != game_id)
+    return std::nullopt;
+  return resolved;
+}
 
 struct RuntimeControllerSession
 {
@@ -1050,6 +1122,16 @@ SessionResult RunGameSession(const DolphinSwitch::LaunchRequest& request,
     }
   }
 
+  if (!resolved_request.nand_title && extension != ".json")
+  {
+    if (const std::optional<std::string> disc =
+            LastDiscForGame(resolved_request.game_id, resolved_request.path))
+    {
+      INFO_LOG_FMT(CORE, "Starting with the last disc used: {}", *disc);
+      resolved_request.path = *disc;
+    }
+  }
+
   std::unique_ptr<BootParameters> boot = GenerateBootParameters(resolved_request);
   if (!boot)
   {
@@ -1215,6 +1297,23 @@ SessionResult RunGameSession(const DolphinSwitch::LaunchRequest& request,
       {
         ApplyRuntimeControllerMode(&runtime_controllers, player, runtime_controllers.modes[player]);
       }
+    }
+
+    // The mode last chosen in the in-game menu for this game.
+    for (int player = 0; player < 4; ++player)
+    {
+      const std::optional<std::string> saved =
+          ReadSessionState(resolved_request.game_id, ControllerModeKey(player));
+      int value = -1;
+      if (!saved || !TryParse(*saved, &value) ||
+          value < static_cast<int>(RuntimeControllerMode::GameCube) ||
+          value > static_cast<int>(RuntimeControllerMode::ClassicController))
+      {
+        continue;
+      }
+      const auto mode = static_cast<RuntimeControllerMode>(value);
+      if (mode != runtime_controllers.modes[player])
+        ApplyRuntimeControllerMode(&runtime_controllers, player, mode);
     }
   }
   DolphinSwitch::RuntimeOverlay::BeginSession(resolved_request.path, resolved_request.game_id,
@@ -1390,6 +1489,9 @@ SessionResult RunGameSession(const DolphinSwitch::LaunchRequest& request,
         else
         {
           system.GetDVDInterface().ChangeDisc(Core::CPUThreadGuard{system}, action.path);
+          const std::unique_ptr<DiscIO::VolumeDisc> disc = DiscIO::CreateDisc(action.path);
+          if (disc && disc->GetGameID() == resolved_request.game_id)
+            WriteSessionState(resolved_request.game_id, "Disc", action.path);
         }
         break;
       case DolphinSwitch::RuntimeOverlay::ActionType::ToggleCheats:
@@ -1412,6 +1514,9 @@ SessionResult RunGameSession(const DolphinSwitch::LaunchRequest& request,
         break;
       case DolphinSwitch::RuntimeOverlay::ActionType::ToggleVBISkip:
         DolphinSwitch::RuntimeOverlay::ToggleVBISkipForSession();
+        break;
+      case DolphinSwitch::RuntimeOverlay::ActionType::ToggleWriteBackCache:
+        DolphinSwitch::RuntimeOverlay::ToggleWriteBackCacheForGame();
         break;
       case DolphinSwitch::RuntimeOverlay::ActionType::ToggleSkylandersPortal:
       {
@@ -1450,6 +1555,11 @@ SessionResult RunGameSession(const DolphinSwitch::LaunchRequest& request,
             action.value2 <= static_cast<int>(RuntimeControllerMode::ClassicController);
         const bool success =
             valid_mode && ApplyRuntimeControllerMode(&runtime_controllers, action.value, mode);
+        if (success)
+        {
+          WriteSessionState(resolved_request.game_id, ControllerModeKey(action.value),
+                            std::to_string(action.value2));
+        }
         DolphinSwitch::RuntimeOverlay::SetControllerModeResult(action.value, mode, success);
         break;
       }

@@ -105,7 +105,7 @@ struct StateSaveMonitorRequest
 
 constexpr std::uint64_t MENU_CHORD =
     HidNpadButton_L | HidNpadButton_R | HidNpadButton_Plus;
-constexpr int MAIN_ITEM_COUNT = 14;
+constexpr int MAIN_ITEM_COUNT = 15;
 constexpr int DISC_ITEM_COUNT = 3;
 constexpr int CONTROLLER_ITEM_COUNT = 6;
 constexpr int CONTROLLER_CALIBRATE_ITEM = 4;
@@ -118,6 +118,7 @@ std::atomic<std::uint64_t> s_render_frame_generation{0};
 bool s_initialized = false;
 bool s_show_fps = false;
 bool s_vbi_skip = false;
+bool s_write_back_cache = false;
 bool s_is_wii = false;
 Page s_page = Page::Main;
 int s_selection = 0;
@@ -700,7 +701,7 @@ bool ItemAvailable(int index)
     return true;
   if (index == 2 && IsHardcoreActive())
     return false;
-  if ((index == 6 || index == 11) && !s_is_wii)
+  if ((index == 6 || index == 12) && !s_is_wii)
     return false;
   return index != 8 || DolphinSwitch::FrameGeneration::IsAvailable();
 }
@@ -804,18 +805,21 @@ void ActivateSelection()
       QueueAction({ActionType::ToggleVBISkip});
       break;
     case 11:
+      QueueAction({ActionType::ToggleWriteBackCache});
+      break;
+    case 12:
       if (s_is_wii)
         SetPage(Page::Skylanders);
       break;
-    case 12:
+    case 13:
       QueueAction({ActionType::Reset});
       CloseMenu();
       break;
-    case 13:
+    case 14:
       QueueAction({ActionType::StopToLauncher});
       CloseMenu();
       break;
-    case 14:
+    case 15:
       SetPage(Page::GBA);
       break;
     }
@@ -1011,12 +1015,15 @@ void RenderMainPage()
   SelectableRow(std::string("VBI Skip                         <  ") +
                     (s_vbi_skip ? "Enabled" : "Disabled") + "  >",
                 10);
+  SelectableRow(std::string("Write-back cache (slow)          <  ") +
+                    (s_write_back_cache ? "Enabled" : "Disabled") + "  >",
+                11);
   if (s_is_wii)
-    SelectableRow("Skylanders portal                               >", 11);
-  SelectableRow("Reset console", 12);
-  SelectableRow("Return to Dolphin launcher", 13);
+    SelectableRow("Skylanders portal                               >", 12);
+  SelectableRow("Reset console", 13);
+  SelectableRow("Return to Dolphin launcher", 14);
   if (HasGBA())
-    SelectableRow("Game Boy Advance                                >", 14);
+    SelectableRow("Game Boy Advance                                >", 15);
 }
 
 void RenderSkylandersPage()
@@ -1284,6 +1291,7 @@ void BeginSession(std::string game_path, std::string game_id, unsigned revision,
   s_actions.clear();
   s_show_fps = Config::Get(Config::GFX_SHOW_FPS);
   s_vbi_skip = Config::Get(Config::GFX_HACK_VI_SKIP);
+  s_write_back_cache = Config::Get(Config::MAIN_ACCURATE_CPU_CACHE);
   s_is_wii = is_wii;
   s_controller_modes = controller_modes;
   s_controller_player = 0;
@@ -1556,6 +1564,43 @@ void ToggleVBISkipForSession()
   Config::SetCurrent(Config::GFX_HACK_VI_SKIP, s_vbi_skip);
   s_status = s_vbi_skip ? "VBI Skip enabled for this session - may cause freezes" :
                           "VBI Skip disabled for this session";
+  s_status_until = std::chrono::steady_clock::now() + std::chrono::seconds(4);
+}
+
+// Dolphin's "Enable Write-Back Cache": applied at once (the JIT clears its cache
+// and the emulated data cache is flushed when it turns off) and saved in the
+// game's settings, so the game starts with it next time.
+void ToggleWriteBackCacheForGame()
+{
+  std::lock_guard lock{s_mutex};
+  if (!s_initialized)
+    return;
+  const bool enabled = !s_write_back_cache;
+  bool saved = false;
+  if (!s_game_id.empty())
+  {
+    const std::string& settings_directory = File::GetUserPath(D_GAMESETTINGS_IDX);
+    const std::string ini_path = settings_directory + s_game_id + ".ini";
+    if (File::CreateFullPath(settings_directory))
+    {
+      Common::IniFile local_ini;
+      if (File::Exists(ini_path))
+        local_ini.Load(ini_path);
+      if (enabled == Config::GetBase(Config::MAIN_ACCURATE_CPU_CACHE))
+        local_ini.DeleteKey("Core", "AccurateCPUCache");
+      else
+        local_ini.GetOrCreateSection("Core")->Set("AccurateCPUCache", enabled);
+      saved = local_ini.Save(ini_path);
+    }
+  }
+  s_write_back_cache = enabled;
+  Config::SetCurrent(Config::MAIN_ACCURATE_CPU_CACHE, enabled);
+  if (enabled)
+    s_status = saved ? "Write-back cache enabled for this game - slower" :
+                       "Write-back cache enabled for this session - slower";
+  else
+    s_status = saved ? "Write-back cache disabled for this game" :
+                       "Write-back cache disabled for this session";
   s_status_until = std::chrono::steady_clock::now() + std::chrono::seconds(4);
 }
 

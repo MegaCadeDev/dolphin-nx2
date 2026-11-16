@@ -418,6 +418,61 @@ void InstallWiiRemotePresets()
   }
 }
 
+#ifdef __SWITCH2__
+// R3 also shakes the remote in the default mapping, so recentering shook it too.
+constexpr const char* POINTER_RECENTER_DEFAULT = "`Y`";
+#else
+constexpr const char* POINTER_RECENTER_DEFAULT = "`R3`";
+#endif
+
+#ifdef __SWITCH2__
+// Moves the pointer recenter off R3 where it still has the old default and R3
+// also shakes the remote, unless something else in that mapping already uses Y.
+void MovePointerRecenterOffShake()
+{
+  std::vector<std::string> paths = {ControllerConfigPath(true)};
+  const std::string directory = ControllerProfileDirectory(true);
+  for (const File::FSTEntry& entry : File::ScanDirectoryTree(directory, false).children)
+  {
+    if (!entry.isDirectory && Lower(entry.virtualName).ends_with(".ini"))
+      paths.push_back(entry.physicalName);
+  }
+
+  for (const std::string& path : paths)
+  {
+    Common::IniFile ini;
+    if (!ini.Load(path))
+      continue;
+    std::vector<std::string> section_names;
+    for (const Common::IniFile::Section& section : ini.GetSections())
+      section_names.push_back(section.GetName());
+
+    bool changed = false;
+    for (const std::string& name : section_names)
+    {
+      Common::IniFile::Section* section = ini.GetSection(name);
+      std::string recenter;
+      std::string shake;
+      if (!section || !section->Get("IMUIR/Recenter", &recenter) || Trim(recenter) != "`R3`" ||
+          !section->Get("Shake/X", &shake) || Trim(shake) != "`R3`")
+      {
+        continue;
+      }
+      const bool y_used = std::ranges::any_of(section->GetValues(), [](const auto& entry) {
+        return Trim(entry.second) == "`Y`";
+      });
+      if (y_used)
+        continue;
+      section->Set("IMUIR/Recenter", std::string(POINTER_RECENTER_DEFAULT));
+      changed = true;
+    }
+    if (changed)
+      ini.Save(path);
+  }
+  ClearControllerValueCache();
+}
+#endif
+
 // Builds before 1.2.2 saved a 60x45 degree IR camera, which shrinks stick and touch pointing.
 void RemoveLegacyWiimoteCameraFov()
 {
@@ -563,10 +618,17 @@ public:
   {
     m_values.clear();
     if (!RecoverAtomicFile(path))
+    {
+      SWITCH_DIAG_MARK("store: load %s: recovering the old file failed (errno %d)", path.c_str(),
+                       errno);
       return false;
+    }
     FILE* file = std::fopen(path.c_str(), "rb");
     if (!file)
+    {
+      SWITCH_DIAG_MARK("store: load %s: open failed (errno %d)", path.c_str(), errno);
       return false;
+    }
     char line[4096];
     while (std::fgets(line, sizeof(line), file))
     {
@@ -580,17 +642,26 @@ public:
       if (!key.empty())
         m_values[std::move(key)] = Trim(text.substr(separator + 1));
     }
+    SWITCH_DIAG_MARK("store: loaded %s (%zu values, %s SMB shares)", path.c_str(), m_values.size(),
+                     Get("Storage/SmbCount", "0").c_str());
     return std::fclose(file) == 0;
   }
 
   bool Save(const std::string& path) const
   {
     if (!RecoverAtomicFile(path))
+    {
+      SWITCH_DIAG_MARK("store: save %s: recovering the old file failed (errno %d)", path.c_str(),
+                       errno);
       return false;
+    }
     const std::string temporary = path + ".tmp";
     FILE* file = std::fopen(temporary.c_str(), "wb");
     if (!file)
+    {
+      SWITCH_DIAG_MARK("store: save %s: open failed (errno %d)", path.c_str(), errno);
       return false;
+    }
     bool ok = std::fputs("# Dolphin NX SDL launcher\n", file) >= 0;
     for (const auto& [key, value] : m_values)
     {
@@ -608,6 +679,7 @@ public:
       ok = false;
     if (!ok)
     {
+      SWITCH_DIAG_MARK("store: save %s: write failed (errno %d)", path.c_str(), errno);
       std::remove(temporary.c_str());
       return false;
     }
@@ -616,11 +688,14 @@ public:
     const bool had_current = RegularFileExists(path);
     if (had_current && std::rename(path.c_str(), backup.c_str()) != 0)
     {
+      SWITCH_DIAG_MARK("store: save %s: moving the old file aside failed (errno %d)", path.c_str(),
+                       errno);
       std::remove(temporary.c_str());
       return false;
     }
     if (std::rename(temporary.c_str(), path.c_str()) != 0)
     {
+      SWITCH_DIAG_MARK("store: save %s: replacing the file failed (errno %d)", path.c_str(), errno);
       if (had_current)
         std::rename(backup.c_str(), path.c_str());
       std::remove(temporary.c_str());
@@ -632,6 +707,8 @@ public:
       if (std::remove(backup.c_str()) == 0)
         fsdevCommitDevice("sdmc");
     }
+    SWITCH_DIAG_MARK("store: saved %s (%zu values, %s SMB shares)", path.c_str(), m_values.size(),
+                     Get("Storage/SmbCount", "0").c_str());
     return true;
   }
 
@@ -4621,8 +4698,16 @@ void Launcher::LoadSourcesAndShares()
     share.auto_mount = m_store.GetBool(prefix + "AutoMount", true);
     if (!Storage::SmbRootPath(share.id).empty() && !share.server.empty() && !share.share.empty() &&
         share_ids.insert(share.id).second)
+    {
       m_shares.push_back(std::move(share));
+    }
+    else
+    {
+      SWITCH_DIAG_MARK("smb: share %d dropped on load (id '%s', server set %d, share set %d)",
+                       index, share.id.c_str(), !share.server.empty(), !share.share.empty());
+    }
   }
+  SWITCH_DIAG_MARK("smb: %zu of %d saved shares loaded", m_shares.size(), share_count);
 
   m_usb_generation = Storage::UsbStatusGeneration();
   m_usb_locations = Storage::ListUsbLocations();
@@ -4650,7 +4735,10 @@ void Launcher::StartAutoMountShares()
       if (state->cancel.load(std::memory_order_acquire))
         break;
       std::string error;
-      if (Storage::MountSmb(share, &error, &state->cancel))
+      const bool mounted = Storage::MountSmb(share, &error, &state->cancel);
+      SWITCH_DIAG_MARK("smb: auto-connect of share %s: %s", share.id.c_str(),
+                       mounted ? "connected" : "failed");
+      if (mounted)
       {
         std::lock_guard lock(state->mutex);
         state->mounted_roots.push_back(Storage::SmbRootPath(share.id));
@@ -10589,7 +10677,7 @@ std::vector<InputBinding> Launcher::GetControllerBindings(bool wii, std::string_
              {{"Pointer Down", "IR/Down", "`Y1-`"}},
              {{"Pointer Left", "IR/Left", "`X1-`"}},
              {{"Pointer Right", "IR/Right", "`X1+`"}},
-             {{"Pointer recenter", "IMUIR/Recenter", "`R3`"}},
+             {{"Pointer recenter", "IMUIR/Recenter", POINTER_RECENTER_DEFAULT}},
              {{"Shake X", "Shake/X", "`R3`"}},
              {{"Shake Y", "Shake/Y", "`R3`"}},
              {{"Shake Z", "Shake/Z", "`R3`"}},
@@ -11343,7 +11431,7 @@ void Launcher::WiiMotionSettings(int port, bool per_game, Game* game)
             {"IR relative input", read_bool("IR/Relative Input", true) ? "On" : "Off"},
             {"IR total yaw", std::to_string(read_int("IR/Total Yaw", 25)) + " deg"},
             {"IR total pitch", std::to_string(read_int("IR/Total Pitch", 20)) + " deg"},
-            {"Pointer recenter", BindingDisplayName(read("IMUIR/Recenter", "`R3`")), true, false,
+            {"Pointer recenter", BindingDisplayName(read("IMUIR/Recenter", POINTER_RECENTER_DEFAULT)), true, false,
              false, true, false},
             {"Calibration guide", "Keep controller still", true, false, false},
         };
@@ -11399,7 +11487,7 @@ void Launcher::WiiMotionSettings(int port, bool per_game, Game* game)
         }
         else if (index == 12)
         {
-          const InputBinding recenter{"Pointer recenter", "IMUIR/Recenter", "`R3`"};
+          const InputBinding recenter{"Pointer recenter", "IMUIR/Recenter", POINTER_RECENTER_DEFAULT};
           if (delta < 0)
             WriteControllerValue(target, recenter.key, std::string{});
           else if (delta > 0)
@@ -11438,7 +11526,8 @@ void Launcher::WiiMotionSettings(int port, bool per_game, Game* game)
                                                                   "IR/Total Pitch",
                                                                   "IMUIR/Recenter"};
         static constexpr std::array<std::string_view, 13> defaults = {
-            "False", "False", "True", "True", "70", "2", "3", "1", "0", "True", "25", "20", "`R3`"};
+            "False", "False", "True", "True", "70", "2", "3", "1", "0", "True", "25", "20",
+            POINTER_RECENTER_DEFAULT};
         if (index == 0)
           return set_sensors(true);
         --index;
@@ -18306,6 +18395,14 @@ std::optional<LaunchRequest> Launcher::Run()
     m_store.SetBool("Launcher/WiimoteFovMigrated", true);
     m_store_dirty = true;
   }
+#ifdef __SWITCH2__
+  if (!m_store.GetBool("Launcher/PointerRecenterMoved", false))
+  {
+    MovePointerRecenterOffShake();
+    m_store.SetBool("Launcher/PointerRecenterMoved", true);
+    m_store_dirty = true;
+  }
+#endif
   ScanGames();
   BeginScreenFx();
   RenderGrid(0);
