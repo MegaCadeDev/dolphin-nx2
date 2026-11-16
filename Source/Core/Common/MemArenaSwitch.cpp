@@ -80,11 +80,21 @@ FastmemSupport DetectFastmemSupport()
       SVC_UNMAP_PROCESS_CODE_MEMORY,
   };
   if (!std::ranges::all_of(arena_syscalls, envIsSyscallHinted))
+  {
+    for (const unsigned svc : arena_syscalls)
+    {
+      if (!envIsSyscallHinted(svc))
+        SWITCH_DIAG_MARK("fastmem: svc 0x%x is not available to this process", svc);
+    }
     return support;
+  }
 
   const Handle self = envGetOwnProcessHandle();
   if (self == INVALID_HANDLE)
+  {
+    SWITCH_DIAG_MARK("fastmem: no handle to the own process");
     return support;
+  }
 
   void* const backing = memalign(HORIZON_PAGE_SIZE, HORIZON_PAGE_SIZE);
   if (!backing)
@@ -107,7 +117,10 @@ FastmemSupport DetectFastmemSupport()
   Result result = svcMapProcessCodeMemory(self, reinterpret_cast<u64>(canonical),
                                            reinterpret_cast<u64>(backing), HORIZON_PAGE_SIZE);
   if (R_FAILED(result))
+  {
+    SWITCH_DIAG_MARK("fastmem: probe svcMapProcessCodeMemory: 0x%x", result);
     return support;
+  }
   ScopeGuard canonical_mapping_guard([self, canonical, backing] {
     svcUnmapProcessCodeMemory(self, reinterpret_cast<u64>(canonical),
                               reinterpret_cast<u64>(backing), HORIZON_PAGE_SIZE);
@@ -116,7 +129,10 @@ FastmemSupport DetectFastmemSupport()
   result = svcSetProcessMemoryPermission(self, reinterpret_cast<u64>(canonical),
                                          HORIZON_PAGE_SIZE, Perm_Rw);
   if (R_FAILED(result))
+  {
+    SWITCH_DIAG_MARK("fastmem: probe svcSetProcessMemoryPermission: 0x%x", result);
     return support;
+  }
 
   virtmemLock();
   void* const alias = virtmemFindAslr(HORIZON_PAGE_SIZE, HORIZON_PAGE_SIZE);
@@ -133,7 +149,10 @@ FastmemSupport DetectFastmemSupport()
 
   result = svcMapProcessMemory(alias, self, reinterpret_cast<u64>(canonical), HORIZON_PAGE_SIZE);
   if (R_FAILED(result))
+  {
+    SWITCH_DIAG_MARK("fastmem: probe svcMapProcessMemory: 0x%x", result);
     return support;
+  }
   ScopeGuard alias_mapping_guard([alias, self, canonical] {
     svcUnmapProcessMemory(alias, self, reinterpret_cast<u64>(canonical), HORIZON_PAGE_SIZE);
   });
@@ -141,7 +160,10 @@ FastmemSupport DetectFastmemSupport()
   constexpr u32 pattern = 0x4E58564B;
   *static_cast<volatile u32*>(alias) = pattern;
   if (*static_cast<volatile u32*>(canonical) != pattern)
+  {
+    SWITCH_DIAG_MARK("fastmem: probe alias does not mirror its source");
     return support;
+  }
   *static_cast<volatile u32*>(canonical) = 0;
   support.arena = true;
 

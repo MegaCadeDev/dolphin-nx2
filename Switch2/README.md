@@ -81,7 +81,34 @@ None of the other Switch 2 homebrew checked (RetroArch, Kaizhar, mGBA) use USB h
 either.
 
 Diagnostics test switches (empty files in `sdmc:/switch/dolphin/diag/`):
-`no-network`, `no-audio` and `no-fastmem` each leave that part off.
+`no-network`, `no-audio`, `no-fastmem` and `cpu-boost` each leave that part off.
+
+## Performance and motion (2026-11-16)
+
+Measured in Wii Sports Resort table tennis with the diagnostics build, whose
+`boot.log` gets a `perf:` line (speed, max speed, FPS, VPS) and a `jit:` line
+(publish requests to kaiHEN) every 10 seconds.
+
+- **JIT publishing is batched.** Every code change used to be its own request to
+  kaiHEN's RO. Now the changes made in one write scope (a compiled block with its
+  links, a backpatch, the blocks one invalidation destroys) go out as one request
+  when the scope ends (`Common/MemoryUtil.cpp`). In normal play, waiting on kaiHEN
+  is now under 1% of the time.
+- **CPU boost stays on for the whole game** on Switch 2, not just while it boots.
+  The worst dips went from 60-78% speed to 80-89%. The test switch `cpu-boost`
+  turns it off.
+- **Fastmem is not available under kaiHEN.** The process is not granted
+  svcSetProcessMemoryPermission (0x73), svcMapProcessMemory (0x74),
+  svcUnmapProcessMemory (0x75), svcMapProcessCodeMemory (0x77) or
+  svcUnmapProcessCodeMemory (0x78), so the JIT uses its page table lookup
+  instead. The remaining dips are CPU-bound (speed equals max speed). Fastmem
+  needs kaiHEN to grant those svcs, or to offer a service that maps the
+  emulated memory at its fastmem addresses.
+- **Wireless motion is steadier** (`InputCommon/ControllerInterface/Switch/Switch.cpp`).
+  A missed motion sample used to stop the sensor and read as free fall for a
+  second. Now a gap keeps the last reading (the gyroscope reads still after
+  100 ms), the sensor only restarts after 500 ms without samples, and all samples
+  since the last read are averaged.
 
 ## Files here
 

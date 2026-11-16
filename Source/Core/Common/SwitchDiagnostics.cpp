@@ -339,6 +339,17 @@ bool IsDisabledByFile(const char* name)
   return disabled;
 }
 
+bool IsSetByFile(const char* name)
+{
+  char path[96];
+  std::snprintf(path, sizeof(path), "%s/%s", DIAG_DIRECTORY, name);
+  struct stat info{};
+  const bool set = stat(path, &info) == 0;
+  if (set)
+    Mark("test switch: %s is set", name);
+  return set;
+}
+
 void EnableDolphinLogging()
 {
   auto* const manager = Common::Log::LogManager::GetInstance();

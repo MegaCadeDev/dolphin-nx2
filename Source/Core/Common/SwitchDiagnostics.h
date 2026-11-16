@@ -50,16 +50,22 @@ bool IsFastmemDisabledByFile();
 // switch that leaves one subsystem off, to find what breaks the next program.
 bool IsDisabledByFile(const char* name);
 
+// True when sdmc:/switch/dolphin/diag/<name> exists (and marks it): a test
+// switch that turns an experiment on.
+bool IsSetByFile(const char* name);
+
 // Writes crash.log. Safe to call from the libnx exception handler: no allocation.
 void WriteCrashReport(const ThreadExceptionDump* context);
 }  // namespace Common::SwitchDiagnostics
 
 #define SWITCH_DIAG_MARK(...) ::Common::SwitchDiagnostics::Mark(__VA_ARGS__)
 #define SWITCH_DIAG_DISABLED(name) ::Common::SwitchDiagnostics::IsDisabledByFile(name)
+#define SWITCH_DIAG_SET(name) ::Common::SwitchDiagnostics::IsSetByFile(name)
 
 #else
 
 #define SWITCH_DIAG_MARK(...) ((void)0)
 #define SWITCH_DIAG_DISABLED(name) false
+#define SWITCH_DIAG_SET(name) false
 
 #endif

@@ -8,6 +8,8 @@
 
 #include <switch.h>
 
+#include "Common/SwitchDiagnostics.h"
+
 namespace Common::HorizonClocks
 {
 namespace
@@ -26,7 +28,9 @@ void AcquireCpuBoost()
   if (s_boost_count++ != 0)
     return;
 
-  s_boost_active = R_SUCCEEDED(appletSetCpuBoostMode(ApmCpuBoostMode_FastLoad));
+  const Result result = appletSetCpuBoostMode(ApmCpuBoostMode_FastLoad);
+  s_boost_active = R_SUCCEEDED(result);
+  SWITCH_DIAG_MARK("clocks: cpu boost on: 0x%x", result);
 }
 
 void ReleaseCpuBoost()
@@ -38,7 +42,9 @@ void ReleaseCpuBoost()
   if (s_boost_count == 0 || --s_boost_count != 0 || !s_boost_active)
     return;
 
-  (void)appletSetCpuBoostMode(ApmCpuBoostMode_Normal);
+  const Result result = appletSetCpuBoostMode(ApmCpuBoostMode_Normal);
+  (void)result;
+  SWITCH_DIAG_MARK("clocks: cpu boost off: 0x%x", result);
   s_boost_active = false;
 }
 }

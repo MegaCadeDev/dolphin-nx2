@@ -12,8 +12,10 @@
 #include "Common/SwitchDiagnostics.h"
 
 #ifdef __SWITCH__
+#include <algorithm>
 #include <map>
 #include <mutex>
+#include <vector>
 
 #include <malloc.h>
 #include <switch.h>
@@ -121,36 +123,144 @@ ExecutableMemory AllocateExecutableMemory(size_t size)
 }
 
 #ifdef __SWITCH2__
-void PublishExecutableMemory(const u8* rw_start, const u8* rw_end)
+static int& JITPageWriteNestCounter();
+
+namespace
 {
-  if (rw_start == rw_end)
+// Every publish is a request to kaiHEN's RO with two mapped buffers. So the
+// changes a thread makes inside a write scope (a compiled block with its near
+// and far code and its links, a backpatch, a batch of destroyed blocks) are
+// collected and sent as one request when its outermost scope ends: the thread
+// runs none of that code before then.
+struct PendingPublish
+{
+  const u8* base = nullptr;  // the allocation's RW address; nullptr when empty
+  std::vector<KaihenJitRange> ranges;
+};
+
+thread_local PendingPublish s_pending_publish;
+
+#ifdef DOLPHIN_SWITCH_DIAGNOSTICS
+struct PublishStats
+{
+  u64 requests = 0;
+  u64 ranges = 0;
+  u64 bytes = 0;
+  u64 ticks = 0;
+  u64 last_report = 0;
+};
+PublishStats s_publish_stats;  // guarded by s_switch_jit_mutex
+#endif
+
+// Called with s_switch_jit_mutex held.
+void SendPublishLocked(const u8* base, std::vector<KaihenJitRange>& ranges)
+{
+  const auto it = s_switch_jit_allocations.find(const_cast<u8*>(base));
+  if (it == s_switch_jit_allocations.end() || ranges.empty())
     return;
 
-  std::lock_guard lock{s_switch_jit_mutex};
-  // Allocations are keyed by their RW address; find the one containing rw_start.
-  auto it = s_switch_jit_allocations.upper_bound(const_cast<u8*>(rw_start));
-  if (it == s_switch_jit_allocations.begin())
+  // kaihenJitPublishRanges only merges ranges that follow each other in order.
+  std::sort(ranges.begin(), ranges.end(),
+            [](const KaihenJitRange& a, const KaihenJitRange& b) { return a.offset < b.offset; });
+  size_t merged = 0;
+  for (size_t i = 1; i < ranges.size(); ++i)
   {
-    PanicAlertFmt("Publishing JIT code outside any allocation: {}", fmt::ptr(rw_start));
-    return;
+    KaihenJitRange& last = ranges[merged];
+    const KaihenJitRange& range = ranges[i];
+    if (range.offset <= last.offset + last.size)
+      last.size = std::max(last.offset + last.size, range.offset + range.size) - last.offset;
+    else
+      ranges[++merged] = range;
   }
-  --it;
-  const u8* base = static_cast<const u8*>(it->first);
-  Jit& jit = it->second.jit;
-  if (rw_end > base + jit.size)
-  {
-    PanicAlertFmt("Publishing JIT code past the end of its allocation: {}", fmt::ptr(rw_end));
-    return;
-  }
+  ranges.resize(merged + 1);
 
-  const KaihenJitRange range{static_cast<u64>(rw_start - base),
-                             static_cast<u64>(rw_end - rw_start)};
-  const Result result = kaihenJitPublishRanges(&jit, &range, 1);
+#ifdef DOLPHIN_SWITCH_DIAGNOSTICS
+  const u64 start = armGetSystemTick();
+#endif
+  const Result result = kaihenJitPublishRanges(&it->second.jit, ranges.data(), ranges.size());
   if (R_FAILED(result))
   {
     SWITCH_DIAG_MARK("jit: kaihenJitPublishRanges failed 0x%x", result);
     PanicAlertFmt("kaihenJitPublishRanges failed: 0x{:08x}", result);
   }
+#ifdef DOLPHIN_SWITCH_DIAGNOSTICS
+  PublishStats& stats = s_publish_stats;
+  const u64 end = armGetSystemTick();
+  stats.requests++;
+  stats.ranges += ranges.size();
+  for (const KaihenJitRange& range : ranges)
+    stats.bytes += range.size;
+  stats.ticks += end - start;
+  if (stats.last_report == 0)
+    stats.last_report = end;
+  if (armTicksToNs(end - stats.last_report) >= 10'000'000'000ULL)
+  {
+    SWITCH_DIAG_MARK("jit: %lu publish requests in %lu ms: %lu ranges, %lu KiB, %lu us waiting",
+                     static_cast<unsigned long>(stats.requests),
+                     static_cast<unsigned long>(armTicksToNs(end - stats.last_report) / 1000000),
+                     static_cast<unsigned long>(stats.ranges),
+                     static_cast<unsigned long>(stats.bytes / 1024),
+                     static_cast<unsigned long>(armTicksToNs(stats.ticks) / 1000));
+    stats = PublishStats{};
+    stats.last_report = end;
+  }
+#endif
+}
+
+void FlushPendingPublish()
+{
+  PendingPublish& pending = s_pending_publish;
+  if (!pending.base)
+    return;
+  std::lock_guard lock{s_switch_jit_mutex};
+  SendPublishLocked(pending.base, pending.ranges);
+  pending.base = nullptr;
+  pending.ranges.clear();
+}
+}  // namespace
+
+void PublishExecutableMemory(const u8* rw_start, const u8* rw_end)
+{
+  if (rw_start == rw_end)
+    return;
+
+  const u8* base;
+  KaihenJitRange range;
+  {
+    std::lock_guard lock{s_switch_jit_mutex};
+    // Allocations are keyed by their RW address; find the one containing rw_start.
+    auto it = s_switch_jit_allocations.upper_bound(const_cast<u8*>(rw_start));
+    if (it == s_switch_jit_allocations.begin())
+    {
+      PanicAlertFmt("Publishing JIT code outside any allocation: {}", fmt::ptr(rw_start));
+      return;
+    }
+    --it;
+    base = static_cast<const u8*>(it->first);
+    if (rw_end > base + it->second.jit.size)
+    {
+      PanicAlertFmt("Publishing JIT code past the end of its allocation: {}", fmt::ptr(rw_end));
+      return;
+    }
+    range = {static_cast<u64>(rw_start - base), static_cast<u64>(rw_end - rw_start)};
+
+    if (JITPageWriteNestCounter() == 0)
+    {
+      std::vector<KaihenJitRange> ranges{range};
+      SendPublishLocked(base, ranges);
+      return;
+    }
+  }
+
+  PendingPublish& pending = s_pending_publish;
+  if (pending.base && pending.base != base)
+    FlushPendingPublish();
+  if (!pending.base)
+  {
+    pending.base = base;
+    pending.ranges.reserve(64);
+  }
+  pending.ranges.push_back(range);
 }
 #endif
 // This function is used to provide a counter for the JITPageWrite*Execute*
@@ -212,6 +322,11 @@ void JITPageWriteDisableExecuteEnable()
   // are not matched with previous calls to JITPageWriteEnableExecuteDisable()
   if (JITPageWriteNestCounter() < 0)
     PanicAlertFmt("JITPageWriteNestCounter() underflowed");
+
+#ifdef __SWITCH2__
+  if (JITPageWriteNestCounter() == 0)
+    FlushPendingPublish();
+#endif
 
 #if defined(_M_ARM_64) && defined(__APPLE__)
   if (JITPageWriteNestCounter() == 0)

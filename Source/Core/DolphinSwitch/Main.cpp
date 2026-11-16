@@ -77,6 +77,7 @@
 #include "InputCommon/ControllerInterface/Switch/Switch.h"
 #include "InputCommon/InputConfig.h"
 #include "UICommon/UICommon.h"
+#include "VideoCommon/PerformanceMetrics.h"
 #include "VideoCommon/Present.h"
 #include "VideoCommon/VideoBackendBase.h"
 #include "VideoCommon/VideoConfig.h"
@@ -1110,6 +1111,14 @@ SessionResult RunGameSession(const DolphinSwitch::LaunchRequest& request,
   std::string handoff_error;
   std::optional<Common::HorizonClocks::ScopedCpuBoost> boot_boost;
   std::optional<std::uint64_t> frames_when_running;
+#ifdef __SWITCH2__
+  // Without fastmem (kaiHEN doesn't grant its svcs) the emulated CPU is the limit,
+  // and keeping the boot's CPU boost for the whole game lifted the dips in Wii
+  // Sports Resort table tennis from 60-78% speed to 80-89%.
+  const bool keep_cpu_boost = !SWITCH_DIAG_DISABLED("cpu-boost");
+#else
+  const bool keep_cpu_boost = false;
+#endif
   BootParameters* const pending_boot = boot.get();
   const auto prepare_session = [&] {
     boot_boost.emplace();
@@ -1246,11 +1255,44 @@ SessionResult RunGameSession(const DolphinSwitch::LaunchRequest& request,
   std::optional<std::uint64_t> pause_after_render_generation;
   std::uint64_t handled_operation_mode_generation =
       s_operation_mode_generation.load(std::memory_order_acquire);
+#ifdef DOLPHIN_SWITCH_DIAGNOSTICS
+  auto next_perf_mark = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+  bool settings_marked = false;
+#endif
   while (s_session_running.load(std::memory_order_acquire) && (applet_alive = appletMainLoop()))
   {
     Core::HostDispatchJobs(system);
 
-    if (boot_boost && ever_running.load(std::memory_order_acquire))
+#ifdef DOLPHIN_SWITCH_DIAGNOSTICS
+    // Speed is emulated time over real time; max speed is how fast the CPU thread
+    // could go if it never waited (below 100% while speed is too: the CPU is the limit).
+    if (Core::GetState(system) == Core::State::Running)
+    {
+      if (!settings_marked)
+      {
+        settings_marked = true;
+        SWITCH_DIAG_MARK("perf: settings cpu core %d, dual core %d, sync gpu %d, efb scale %d, "
+                         "shader mode %d, efb access %d, efb copy to ram skipped %d",
+                         static_cast<int>(Config::Get(Config::MAIN_CPU_CORE)),
+                         Config::Get(Config::MAIN_CPU_THREAD), Config::Get(Config::MAIN_SYNC_GPU),
+                         Config::Get(Config::GFX_EFB_SCALE),
+                         static_cast<int>(Config::Get(Config::GFX_SHADER_COMPILATION_MODE)),
+                         Config::Get(Config::GFX_HACK_EFB_ACCESS_ENABLE),
+                         Config::Get(Config::GFX_HACK_SKIP_EFB_COPY_TO_RAM));
+      }
+      const auto now = std::chrono::steady_clock::now();
+      if (now >= next_perf_mark)
+      {
+        next_perf_mark = now + std::chrono::seconds(10);
+        const PerformanceMetrics& metrics = system.GetPerfMetrics();
+        SWITCH_DIAG_MARK("perf: speed %.0f%%, max speed %.0f%%, %.1f fps, %.1f vps",
+                         metrics.GetSpeed() * 100.0, metrics.GetMaxSpeed() * 100.0,
+                         metrics.GetFPS(), metrics.GetVPS());
+      }
+    }
+#endif
+
+    if (boot_boost && !keep_cpu_boost && ever_running.load(std::memory_order_acquire))
     {
       const std::uint64_t frames = DolphinSwitch::RuntimeOverlay::GetRenderFrameGeneration();
       if (!frames_when_running)

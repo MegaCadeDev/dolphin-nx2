@@ -29,6 +29,12 @@ namespace
 {
 constexpr std::size_t PLAYER_COUNT = 4;
 constexpr std::chrono::seconds DEVICE_RETRY_INTERVAL{1};
+// Wireless controllers send motion in bursts and drop packets now and then. A gap
+// shorter than MOTION_HOLD keeps the last reading; after it the gyroscope reads
+// still, and only after MOTION_TIMEOUT without a sample is the sensor restarted.
+constexpr std::chrono::milliseconds MOTION_HOLD{100};
+constexpr std::chrono::milliseconds MOTION_TIMEOUT{500};
+constexpr std::size_t MOTION_SAMPLES = 17;  // the shared memory LIFO's length
 constexpr u64 RUNTIME_OVERLAY_CHORD = HidNpadButton_L | HidNpadButton_R | HidNpadButton_Plus;
 constexpr u32 NSO_CONTROLLER_STYLES =
     HidNpadStyleTag_NpadLagon | HidNpadStyleTag_NpadLucia | HidNpadStyleTag_NpadLager |
@@ -597,11 +603,8 @@ private:
 
     HidSixAxisSensorHandle handle{};
     const Result get_result = hidGetSixAxisSensorHandles(&handle, 1, id, style);
-    if (R_SUCCEEDED(get_result) && R_SUCCEEDED(hidStartSixAxisSensor(handle)))
-    {
-      m_motion_handles[index] = handle;
-      m_motion_ready[index] = true;
-    }
+    if (R_SUCCEEDED(get_result))
+      StartMotionHandleLocked(index, handle);
   }
 
   void StartMotionHandleLocked(std::size_t index, HidSixAxisSensorHandle handle)
@@ -612,6 +615,8 @@ private:
     {
       m_motion_handles[index] = handle;
       m_motion_ready[index] = true;
+      m_motion_has_sample[index] = false;
+      m_motion_last_sample[index] = Clock::now();
     }
   }
 
@@ -721,34 +726,79 @@ private:
     }
   }
 
-  bool ReadMotionHandleLocked(int index, std::array<float, 3>* accel,
-                              std::array<float, 3>* gyro)
+  enum class MotionRead
   {
-    HidSixAxisSensorState sensor{};
-    if (hidGetSixAxisSensorStates(m_motion_handles[index], &sensor, 1) != 1 ||
-        !(sensor.attributes & HidSixAxisSensorAttribute_IsConnected))
+    New,   // the values are the average of the samples since the last read
+    Held,  // no new sample yet: the values are left as they were
+    Lost,  // no sample for MOTION_TIMEOUT: the sensor was stopped
+  };
+
+  MotionRead ReadMotionHandleLocked(int index, std::array<float, 3>* accel,
+                                    std::array<float, 3>* gyro)
+  {
+    std::array<HidSixAxisSensorState, MOTION_SAMPLES> states{};
+    const size_t count =
+        hidGetSixAxisSensorStates(m_motion_handles[index], states.data(), states.size());
+    const auto now = Clock::now();
+
+    // states[0] is the newest. A sampling number lower than the last one read
+    // means the controller reconnected: only its newest sample is used then.
+    const u64 last = m_motion_sampling[index];
+    const bool continued = m_motion_has_sample[index] && count > 0 &&
+                           states[0].sampling_number >= last;
+    std::array<double, 3> accel_sum{};
+    std::array<double, 3> gyro_sum{};
+    size_t used = 0;
+    for (size_t i = 0; i < count; ++i)
     {
-      (void)hidStopSixAxisSensor(m_motion_handles[index]);
-      m_motion_ready[index] = false;
-      return false;
+      const HidSixAxisSensorState& sensor = states[i];
+      if (continued ? sensor.sampling_number <= last : i > 0)
+        break;
+      const HidVector& a = sensor.acceleration;
+      const HidVector& g = sensor.angular_velocity;
+      if (!(sensor.attributes & HidSixAxisSensorAttribute_IsConnected) || !std::isfinite(a.x) ||
+          !std::isfinite(a.y) || !std::isfinite(a.z) || !std::isfinite(g.x) ||
+          !std::isfinite(g.y) || !std::isfinite(g.z))
+      {
+        continue;
+      }
+      accel_sum[0] += a.x;
+      accel_sum[1] += a.y;
+      accel_sum[2] += a.z;
+      gyro_sum[0] += g.x;
+      gyro_sum[1] += g.y;
+      gyro_sum[2] += g.z;
+      ++used;
     }
 
-    const HidVector& sensor_accel = sensor.acceleration;
-    const HidVector& sensor_gyro = sensor.angular_velocity;
-    if (!std::isfinite(sensor_accel.x) || !std::isfinite(sensor_accel.y) ||
-        !std::isfinite(sensor_accel.z) || !std::isfinite(sensor_gyro.x) ||
-        !std::isfinite(sensor_gyro.y) || !std::isfinite(sensor_gyro.z))
+    if (used == 0)
     {
-      return false;
+      const auto quiet = now - m_motion_last_sample[index];
+      if (quiet >= MOTION_TIMEOUT)
+      {
+        (void)hidStopSixAxisSensor(m_motion_handles[index]);
+        m_motion_ready[index] = false;
+        return MotionRead::Lost;
+      }
+      if (gyro && quiet >= MOTION_HOLD)
+        *gyro = {};
+      return MotionRead::Held;
     }
 
-    constexpr float gravity = static_cast<float>(MathUtil::GRAVITY_ACCELERATION);
-    constexpr float tau = static_cast<float>(MathUtil::TAU);
-    *accel = {sensor_accel.x * gravity, sensor_accel.y * gravity,
-              sensor_accel.z * gravity};
+    m_motion_sampling[index] = states[0].sampling_number;
+    m_motion_has_sample[index] = true;
+    m_motion_last_sample[index] = now;
+
+    const double gravity = MathUtil::GRAVITY_ACCELERATION / used;
+    const double tau = MathUtil::TAU / used;
+    *accel = {static_cast<float>(accel_sum[0] * gravity), static_cast<float>(accel_sum[1] * gravity),
+              static_cast<float>(accel_sum[2] * gravity)};
     if (gyro)
-      *gyro = {sensor_gyro.x * tau, sensor_gyro.y * tau, sensor_gyro.z * tau};
-    return true;
+    {
+      *gyro = {static_cast<float>(gyro_sum[0] * tau), static_cast<float>(gyro_sum[1] * tau),
+               static_cast<float>(gyro_sum[2] * tau)};
+    }
+    return MotionRead::New;
   }
 
   void ClearNunchukMotionLocked()
@@ -759,7 +809,8 @@ private:
 
   void ClearMotionLocked()
   {
-    m_accel = {};
+    // At rest, lying flat: zero acceleration would read as free fall.
+    m_accel = {0.0f, 0.0f, -static_cast<float>(MathUtil::GRAVITY_ACCELERATION)};
     m_gyro = {};
     ClearNunchukMotionLocked();
   }
@@ -784,15 +835,18 @@ private:
       return;
     }
 
-    if (!ReadMotionHandleLocked(active, &m_accel, &m_gyro))
+    if (ReadMotionHandleLocked(active, &m_accel, &m_gyro) == MotionRead::Lost)
     {
       m_next_motion_probe = now + DEVICE_RETRY_INTERVAL;
       ClearMotionLocked();
       return;
     }
 
-    if (nunchuk < 0 || !ReadMotionHandleLocked(nunchuk, &m_nunchuk_accel, nullptr))
+    if (nunchuk < 0 ||
+        ReadMotionHandleLocked(nunchuk, &m_nunchuk_accel, nullptr) == MotionRead::Lost)
+    {
       ClearNunchukMotionLocked();
+    }
   }
 
   mutable std::mutex m_mutex;
@@ -811,8 +865,12 @@ private:
 
   std::array<HidSixAxisSensorHandle, 6> m_motion_handles{};
   std::array<bool, 6> m_motion_ready{};
+  std::array<bool, 6> m_motion_has_sample{};
+  std::array<u64, 6> m_motion_sampling{};
+  std::array<Clock::time_point, 6> m_motion_last_sample{};
   Clock::time_point m_next_motion_probe{};
-  std::array<float, 3> m_accel{};
+  std::array<float, 3> m_accel{
+      0.0f, 0.0f, -static_cast<float>(MathUtil::GRAVITY_ACCELERATION)};
   std::array<float, 3> m_gyro{};
   std::array<float, 3> m_nunchuk_accel{
       0.0f, 0.0f, -static_cast<float>(MathUtil::GRAVITY_ACCELERATION)};
