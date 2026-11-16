@@ -42,6 +42,7 @@ This port is a small layer on other people's work. Thanks to everyone below.
   **[mGBA](https://github.com/wowilookgood/mgba)** for Switch 2 by **wowilookgood** (a port of
   [mGBA](https://github.com/mgba-emu/mgba) by endrift): their exit and platform code was
   studied for this port.
+  [Porpoise](https://github.com/PalindromicBreadLoaf/nezumiiruka) by nezumiiruka: their port of Dolphin to the Nintendo Switch was used as the base for this project to be recompiled to Switch 2.
 
 Each project keeps its own license. Dolphin and dolphin-nx are GPLv2+, kaiHEN is
 GPL-2.0-only (libkaihen is ISC), and the other licenses are in each project's repository.
